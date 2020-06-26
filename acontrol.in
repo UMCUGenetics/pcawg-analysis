@@ -1,0 +1,122 @@
+#!@GUILE@ --no-auto-compile
+-*- scheme -*-
+!#
+;;; Copyright © 2020  Roel Janssen <roel@gnu.org>
+;;;
+;;; This program is free software: you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License
+;;; as published by the Free Software Foundation, either version 3 of
+;;; the License, or (at your option) any later version.
+
+(use-modules (ice-9 getopt-long)
+             (pcawg dcc-portal)
+             (pcawg filesystem)
+             (pcawg config))
+
+;; ---------------------------------------------------------------------------
+;; COMMAND-LINE PARSING
+;; ---------------------------------------------------------------------------
+;;
+;; The following section handles command-line arguments.
+;
+
+(define program-options
+  '((access-token        (single-char #\a) (value #t))
+    (cache-directory     (single-char #\c) (value #t))
+    (google-sdk          (single-char #\g) (value #t))
+    (google-project      (single-char #\G) (value #t))
+    (google-region       (single-char #\r) (value #t))
+    (project-code        (single-char #\p) (value #t))
+    (store-directory     (single-char #\s) (value #t))
+    (help                (single-char #\h) (value #f))
+    (version             (single-char #\v) (value #f))))
+
+(define (show-help)
+  (for-each (lambda (line) (display line) (newline))
+   '("This is acontrol."
+     "  --access-token=ARG         -a  The ICGC access token."
+     "  --cache-dir=ARG            -c  Cache directory for HTTP requests."
+     "  --google-sdk=ARG           -g  Location of the Google Cloud SDK."
+     "  --google-project=ARG       -G  Location of the Google Cloud SDK."
+     "  --google-region=ARG        -r  Location of the Google Cloud SDK."
+     "  --project-code=ARG         -p  Which PCAWG project to process."
+     "  --store-directory=ARG      -s  Where to store the data."
+     "  --help                     -h  Show this message."
+     "  --version                  -v  Show versioning information."))
+  (exit 0))
+
+(define (show-version)
+  (display "acontrol @VERSION@")
+  (newline)
+  (exit 0))
+
+(define %config (getopt-long (command-line) program-options))
+
+(when (assoc-ref %config 'help)    (show-help))
+(when (assoc-ref %config 'version) (show-version))
+
+(when (assoc-ref %config 'access-token)
+  (set-access-token! (assoc-ref %config 'access-token)))
+
+(when (assoc-ref %config 'cache-directory)
+  (set-cache-directory! (assoc-ref %config 'cache-directory)))
+
+(when (assoc-ref %config 'google-project)
+  (set-google-project! (assoc-ref %config 'google-project)))
+
+(when (assoc-ref %config 'google-region)
+  (set-google-region! (assoc-ref %config 'google-region)))
+
+(when (assoc-ref %config 'google-sdk)
+  (set-google-sdk! (assoc-ref %config 'google-sdk)))
+
+(when (assoc-ref %config 'project-code)
+  (set-project-code! (assoc-ref %config 'project-code)))
+
+(when (assoc-ref %config 'store-directory)
+  (set-store-directory! (assoc-ref %config 'store-directory)))
+
+;; ---------------------------------------------------------------------------
+;; ENVIRONMENT VARIABLES
+;; ---------------------------------------------------------------------------
+;;
+;; The Score client reads the environment variables “STORAGE_PROFILE” and
+;; “ACCESSTOKEN”, so we set those in the program's runtime environment.
+;
+
+(setenv "STORAGE_PROFILE" (storage-profile))
+(setenv "ACCESSTOKEN"     (access-token))
+
+;; ---------------------------------------------------------------------------
+;; PROCESSING
+;; ---------------------------------------------------------------------------
+;;
+;
+
+(unless (project-code)
+  (format #t "Please specify which project to process.~%")
+  (exit 1))
+
+(catch 'json-invalid
+  (lambda _
+    (let* ((metadata (metadata-for-project (project-code)))
+           (donors   (donors-in-project metadata)))
+      (for-each
+       (lambda (donor-id)
+         (format #t "Processing ~a~%" donor-id)
+         (let ((files (files-for-donor donor-id metadata)))
+           (for-each
+            (lambda (file)
+              (let* ((file-id       (assoc-ref file 'file-id))
+                     (specimen-type (assoc-ref file 'specimen-type))
+                     (filename      (filename-by-file-data file)))
+                (unless (file-exists? filename)
+                  (format #t "Downloading file for ~a.~%" file-id)
+                  (if (download-file file)
+                      (bam->fastq donor-id specimen-type file-id)
+                      (format #t "Downloading of ~s failed.~%" file-id)))))
+            files)))
+       donors)))
+  (lambda (key .args)
+    (format #t "The Collaboratory does not have any samples for project ~s.~%"
+            (project-code))))

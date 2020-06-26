@@ -30,4 +30,4 @@ docker: dist
              --with-source=pcawg-analysis-$(VERSION).tar.gz \
              --format=docker \
              -S /bin=bin -S /lib=lib -S /share=share -S /etc=etc -S /var=var \
-             glibc-utf8-locales tzdata coreutils bash grep gawk
+             glibc-utf8-locales tzdata coreutils bash grep gawk net-base strace

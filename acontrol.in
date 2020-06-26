@@ -9,6 +9,7 @@
 ;;; the License, or (at your option) any later version.
 
 (use-modules (ice-9 getopt-long)
+             (ice-9 threads)
              (pcawg dcc-portal)
              (pcawg filesystem)
              (pcawg config))
@@ -101,14 +102,12 @@
   (lambda _
     (let* ((metadata (metadata-for-project (project-code)))
            (donors   (donors-in-project metadata)))
-      (for-each (lambda (donor-id)
-                  (format #t "Processing ~a~%" donor-id)
-                  (let ((files (files-for-donor donor-id metadata)))
-                    (for-each (lambda (file)
-                                (if (download-file file)
-                                    (bam->fastq file)))
-                              files)))
-                donors)))
+      (n-par-for-each 4
+       (lambda (donor-id)
+         (format #t "Processing ~a~%" donor-id)
+         (let ((files (files-for-donor donor-id metadata)))
+           (for-each bam->fastq files)))
+       donors)))
   (lambda (key .args)
     (format #t "The Collaboratory does not have any samples for project ~s.~%"
             (project-code))))

@@ -124,96 +124,83 @@
               (format #t "Couldn't get URL for ~s.~%" file-id)
               #f)))])))
 
-;; (define (socket-to-file input-port output-port)
-;;   (let* ((buffer-size (expt 2 20))
-;;          (buffer      (make-bytevector buffer-size))
-;;          (received    (get-bytevector-n! input-port buffer 0 buffer-size))
-;;          (total-recvd received))
-;;     (while (not (eof-object? received))
-;;       (put-bytevector output-port buffer 0 received)
-;;       (set! received (get-bytevector-n! input-port buffer 0 buffer-size))
-;;       (unless (eof-object? received)
-;;         (set! total-recvd (+ total-recvd received))))
-;;     total-recvd))
+(define (bam->read-groups bam-file split-completed dest-dir donor-full-name)
+  (if (file-exists? split-completed)
+      #t
+      (begin
+        (mkdir-p dest-dir)
+        (let* ((cmd (format #f "~a split -@ ~a -u /dev/null -f ~s ~s"
+                            %samtools %threads
+                            (string-append dest-dir "/"
+                                           donor-full-name "_NA_%#.%.")
+                            bam-file))
+               (port         (open-input-pipe cmd))
+               (split-output (get-string-all port)))
+          (if (zero? (status:exit-val (close-pipe port)))
+              (call-with-output-file split-completed
+                (lambda (port)
+                  (format port "~a" split-output)
+                  #t))
+              (begin
+                (format #t "Splitting the BAM files in read groups failed with:~%~a~%"
+                        split-output)
+                #f))))))
 
-;; Our “internal cURL” implementation doesn't receive the entire BAM file.
-;; So when re-activating this, please test it properly.
-;; -----------------------------------------------------------------------
-;; (call-with-values
-;;   (lambda _ (http-get url #:streaming? #t))
-;;   (lambda (header input-port)
-;;     (if (= (response-code header) 200)
-;;         (let* ((bytes       (response-content-length header))
-;;                (filename    (string-append (file-id-directory file-id)
-;;                                            "/" object-id ".bam"))
-;;                (output-port (open-output-file filename  #:binary #t))
-;;                (received    (socket-to-file input-port output-port)))
-;;           (if (= bytes received)
-;;               (begin
-;;                 (close-port output-port)
-;;                 #t)
-;;               (begin
-;;                 (format #t "Download for ~s is incomplete.~%" file-id)
-;;                 #f))))))
-;; #f)))))
+(define (read-groups->fastq dest-dir fastq-dir donor-full-name)
+  (let ((unmap-complete (string-append fastq-dir "/complete"))
+        (split-files (scandir dest-dir
+                              (lambda (file)
+                                (string-suffix? ".bam" file)))))
+    (mkdir-p fastq-dir)
+    (format #t "Going to process:~%~{  - ~a~%~}~%" split-files)
+    (not (any not (map
+                   (lambda (file)
+                     (format #t "Unmapping ~s.~%" file)
+                     (let* ((parts          (string-split (basename file ".bam") #\_))
+                            (lane           (list-ref parts 2))
+                            (dest-filename  (format #f  "~a/~a_NA_S1_L~3,,,'0@a"
+                                                    fastq-dir donor-full-name lane))
+                            (part-complete  (string-append dest-filename ".complete")))
+                       (if (file-exists? part-complete)
+                           #t
+                           (let* ((cmd          (format #f "~a sort -@ ~a -T ~a -n ~a | ~a fastq -@ ~a - -1 ~a -2 ~a 2> ~a"
+                                                        %samtools %threads (tmpdir)
+                                                        (string-append dest-dir "/" file)
+                                                        %samtools %threads
+                                                        (string-append dest-filename "_R1_001.fastq.gz")
+                                                        (string-append dest-filename "_R2_001.fastq.gz")
+                                                        (string-append dest-filename ".log")))
+                                  (port         (open-input-pipe cmd))
+                                  (unmap-output (get-string-all port)))
+                             (if (zero? (status:exit-val (close-pipe port)))
+                                 (call-with-output-file part-complete
+                                     (lambda (port)
+                                       (format port "~a" unmap-output)
+                                       #t))
+                                 (begin
+                                   (format #t "Sorting and writing to FASTQ for ~s failed.~%" file)
+                                   #f))))))
+                   split-files)))))
 
 (define (bam->fastq file-data)
-  (let ((donor         (assoc-ref file-data 'donor-id))
-        (specimen-type (assoc-ref file-data 'specimen-type))
-        (file-id       (assoc-ref file-data 'file-id))
-        (bam-file      (filename-by-file-data file-data)))
-    (if (not (file-exists? bam-file))
-        (begin
-          (format #t "Please download ~a first.~%" file-id)
-          #f)
-        (let* ((basedir         (file-id-directory file-id))
-               (dest-dir        (string-append basedir "/split"))
-               (split-completed (string-append dest-dir "/complete"))
-               (fastq-dir       (string-append basedir "/fastq"))
-               (sample-type     specimen-type))
-          (mkdir-p dest-dir)
-          (unless (file-exists? split-completed)
-            (let* ((cmd (format #f "~a split -@ ~a -u /dev/null -f ~s ~s"
-                                %samtools %threads
-                                (string-append dest-dir "/" donor
-                                  (if (eq? sample-type 'TUMOR) "T" "R")
-                                  "_NA_%!_%#.%.")
-                                bam-file))
-                   (port         (open-input-pipe cmd))
-                   (split-output (get-string-all port)))
-              (if (zero? (status:exit-val (close-pipe port)))
-                  (call-with-output-file (string-append dest-dir "/complete")
-                    (lambda (port)
-                      (format port "~a" split-output)))
-                  (begin
-                    (format #t "Splitting the BAM files in read groups failed with:~%~a~%"
-                            split-output)
-                    #f))))
-          (if (not (file-exists? split-completed))
-              #f
-              (let ((split-files (scandir dest-dir
-                                          (lambda (file)
-                                            (string-suffix? file ".bam")))))
-                (for-each
-                 (lambda (file)
-                   (let* ((parts          (string-split (basename file ".bam") "_"))
-                          (donor          (list-ref parts 0))
-                          (flowcell       (list-ref parts 1))
-                          (index          (list-ref parts 2))
-                          (lane           (list-ref parts 3))
-                          (dest-filename  (format #f  "~a/~a_~a_S~a_L~3,,,'0@a"
-                                                  fastq-dir donor flowcell index lane)))
-                     (if (zero? (system
-                                 (string-append
-                                  %samtools " sort -@ "  %threads " -T " (tmpdir) " -n " dest-dir "/" file " | "
-                                  %samtools " fastq -@ " %threads " - "
-                                  " -1 " dest-filename "_R1_001.fastq.gz"
-                                  " -2 " dest-filename "_R2_001.fastq.gz")))
-                         #t
-                         (begin
-                           (format #t "Sorting and writing to FASTQ for ~s failed.~%" file)
-                           #f))))
-                 split-files)))))))
+  (let* ((donor         (assoc-ref file-data 'donor-id))
+         (specimen-type (assoc-ref file-data 'specimen-type))
+         (file-id       (assoc-ref file-data 'file-id))
+         (bam-file      (filename-by-file-data file-data))
+         (basedir         (file-id-directory file-id))
+         (dest-dir        (string-append basedir "/split"))
+         (split-completed (string-append dest-dir "/complete"))
+         (fastq-dir       (string-append basedir "/fastq"))
+         (sample-type     specimen-type)
+         (donor-full-name (string-append donor
+                                         (if (eq? sample-type 'TUMOR) "T" "R"))))
+    (cond
+     [(not (download-file file-data))
+      #f]
+     [(not (bam->read-groups bam-file split-completed dest-dir donor-full-name))
+      #f]
+     [(not (read-groups->fastq dest-dir fastq-dir donor-full-name))
+      #f])))
 
 (define (make-google-buckets donor-id)
   (let ((command (lambda (tumor?)

@@ -24,8 +24,7 @@
 (define program-options
   '((access-token        (single-char #\a) (value #t))
     (cache-directory     (single-char #\c) (value #t))
-    (google-sdk          (single-char #\g) (value #t))
-    (google-project      (single-char #\G) (value #t))
+    (google-project      (single-char #\g) (value #t))
     (google-region       (single-char #\r) (value #t))
     (project-code        (single-char #\p) (value #t))
     (store-directory     (single-char #\s) (value #t))
@@ -37,9 +36,8 @@
    '("This is acontrol."
      "  --access-token=ARG         -a  The ICGC access token."
      "  --cache-dir=ARG            -c  Cache directory for HTTP requests."
-     "  --google-sdk=ARG           -g  Location of the Google Cloud SDK."
-     "  --google-project=ARG       -G  Location of the Google Cloud SDK."
-     "  --google-region=ARG        -r  Location of the Google Cloud SDK."
+     "  --google-project=ARG       -g  The Google project ID."
+     "  --google-region=ARG        -r  The storage region to use."
      "  --project-code=ARG         -p  Which PCAWG project to process."
      "  --store-directory=ARG      -s  Where to store the data."
      "  --help                     -h  Show this message."
@@ -67,9 +65,6 @@
 
 (when (assoc-ref %config 'google-region)
   (set-google-region! (assoc-ref %config 'google-region)))
-
-(when (assoc-ref %config 'google-sdk)
-  (set-google-sdk! (assoc-ref %config 'google-sdk)))
 
 (when (assoc-ref %config 'project-code)
   (set-project-code! (assoc-ref %config 'project-code)))
@@ -102,11 +97,11 @@
   (lambda _
     (let* ((metadata (metadata-for-project (project-code)))
            (donors   (donors-in-project metadata)))
-      (n-par-for-each 4
+      (n-par-for-each 2
        (lambda (donor-id)
          (format #t "Processing ~a~%" donor-id)
          (let ((files (files-for-donor donor-id metadata)))
-           (for-each bam->fastq files)))
+           (n-par-for-each 2 bam->fastq files)))
        donors)))
   (lambda (key .args)
     (format #t "The Collaboratory does not have any samples for project ~s.~%"

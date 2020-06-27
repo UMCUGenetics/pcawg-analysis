@@ -18,12 +18,15 @@
   #:use-module (pcawg config)
   #:export (%score-client
             %samtools
+            %sambamba
             %curl
-            %threads
-            gsutil))
+            %gsutil
+            %threads))
 
 (define %score-client "@SCORECLIENT@")
 (define %samtools     "@SAMTOOLS@")
+(define %sambamba     "@SAMBAMBA@")
 (define %curl         "@CURL@")
+(define %gsutil       "@GSUTIL@")
 (define %threads      (total-processor-count))
-(define (gsutil)     (lambda _ (string-append (google-sdk) "/bin/gsutil")))
+

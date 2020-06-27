@@ -19,13 +19,11 @@
             cache-directory
             google-project
             google-region
-            google-sdk
             project-code
             set-access-token!
             set-cache-directory!
             set-google-project!
             set-google-region!
-            set-google-sdk!
             set-project-code!
             set-store-directory!
             set-tmpdir!
@@ -54,9 +52,6 @@
   (access-token    #:init-value (getenv "ACCESSTOKEN")
                    #:getter get-access-token
                    #:setter set-access-token-private!)
-  (google-sdk      #:init-value #f
-                   #:getter get-google-sdk
-                   #:setter set-google-sdk-private!)
   (google-project  #:init-value #f
                    #:getter get-google-project
                    #:setter set-google-project-private!)
@@ -84,7 +79,6 @@
 (for-each make-getter/setter '(project-code
                                store-directory
                                access-token
-                               google-sdk
                                google-region
                                google-project
                                tmpdir

@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License
 dnl along with this program. If not, see <http://www.gnu.org/licenses/>.
 dnl -*- Autoconf -*-
 
-AC_INIT([pcawg-analysis], [0.0.1], [roel@gnu.org])
+AC_INIT([pcawg-analysis], [0.0.2], [roel@gnu.org])
 AM_INIT_AUTOMAKE([foreign])
 AM_SILENT_RULES([yes])
 
@@ -47,11 +47,25 @@ if test "x$SAMTOOLS" = "x"; then
    AC_MSG_ERROR([Cannot find samtools.])
 fi
 
-dnl Test whether the "samtools" command is somewhere in path.
+dnl Test whether the "sambamba" command is somewhere in path.
+dnl ---------------------------------------------------------------------------
+AC_PATH_PROG([SAMBAMBA], [sambamba])
+if test "x$SAMBAMBA" = "x"; then
+   AC_MSG_ERROR([Cannot find sambamba.])
+fi
+
+dnl Test whether the "curl" command is somewhere in path.
 dnl ---------------------------------------------------------------------------
 AC_PATH_PROG([CURL], [curl])
 if test "x$CURL" = "x"; then
    AC_MSG_ERROR([Cannot find curl.])
+fi
+
+dnl Test whether the "gsutil" command is somewhere in path.
+dnl ---------------------------------------------------------------------------
+AC_PATH_PROG([GSUTIL], [gsutil])
+if test "x$GSUTIL" = "x"; then
+   AC_MSG_ERROR([Cannot find gsutil.])
 fi
 
 AC_CONFIG_FILES([env], [chmod +x env])

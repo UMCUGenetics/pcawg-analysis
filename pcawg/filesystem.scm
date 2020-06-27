@@ -163,8 +163,9 @@
                             (part-complete  (string-append dest-filename ".complete")))
                        (if (file-exists? part-complete)
                            #t
-                           (let* ((cmd          (format #f "~a sort -@ ~a -T ~a -n ~a | ~a fastq -@ ~a - -1 ~a -2 ~a 2> ~a"
-                                                        %samtools %threads (tmpdir)
+                           (let* ((cmd          (format #f "~a sort -t ~a --tmpdir ~a -N ~a | ~a fastq -@ ~a - -1 ~a -2 ~a 2> ~a"
+                                                        %sambamba %threads
+                                                        (if (tmpdir) (tmpdir) "/tmp")
                                                         (string-append dest-dir "/" file)
                                                         %samtools %threads
                                                         (string-append dest-filename "_R1_001.fastq.gz")
@@ -181,6 +182,31 @@
                                    (format #t "Sorting and writing to FASTQ for ~s failed.~%" file)
                                    #f))))))
                    split-files)))))
+
+(define (make-google-bucket donor-full-name)
+  (let ((name (string-append "gs://run-"  (string-downcase donor-full-name) "-umc1")))
+    (if (zero? (system (string-append
+                        %gsutil " mb"
+                        " -p " (google-project)
+                        " -l " (google-region)
+                        " -c STANDARD "
+                        name)))
+        name
+        #f)))
+
+(define (upload-to-the-conglomerates-daughter fastq-dir donor-full-name)
+  (let ((bucket (make-google-bucket donor-full-name)))
+    (if (not bucket)
+        #f
+        (not (any not (map (lambda (file)
+                             (zero? (system
+                                     (string-append
+                                      %gsutil " cp "
+                                      bucket "/aligner/samples/"
+                                      donor-full-name "/" file))))
+                           (scandir fastq-dir
+                                    (lambda (file)
+                                      (string-suffix? ".fastq.gz" file)))))))))
 
 (define (bam->fastq file-data)
   (let* ((donor         (assoc-ref file-data 'donor-id))
@@ -200,17 +226,7 @@
      [(not (bam->read-groups bam-file split-completed dest-dir donor-full-name))
       #f]
      [(not (read-groups->fastq dest-dir fastq-dir donor-full-name))
+      #f]
+     [(not (upload-to-the-conglomerates-daughter fastq-dir donor-full-name))
       #f])))
 
-(define (make-google-buckets donor-id)
-  (let ((command (lambda (tumor?)
-                   (string-append
-                    (gsutil) "mb"
-                    " -p " (google-project)
-                    " -l " (google-region)
-                    " -c STANDARD "
-                    "gs://run-"  (string-downcase donor-id)
-                                 (if tumor? "t" "r")
-                                 "-umc1"))))
-    (system (command #f))
-    (system (command #t))))

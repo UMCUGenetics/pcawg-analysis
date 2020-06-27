@@ -25,8 +25,10 @@
             set-google-project!
             set-google-region!
             set-project-code!
+            set-simultaneous-donors!
             set-store-directory!
             set-tmpdir!
+            simultaneous-donors
             storage-profile
             store-directory
             tmpdir))
@@ -35,29 +37,40 @@
 ;; ----------------------------------------------------------------------------
 
 (define-class <pcawg-config> ()
-  (project-code    #:init-value #f
-                   #:getter get-project-code
-                   #:setter set-project-code-private!)
-  (store-directory #:init-value (string-append (getcwd) "/store")
-                   #:getter get-store-directory
-                   #:setter set-store-directory-private!)
-  (tmpdir          #:init-value (getenv "TMPDIR")
-                   #:getter get-tmpdir
-                   #:setter set-tmpdir-private!)
-  (cache-directory #:init-value #f
-                   #:getter get-cache-directory
-                   #:setter set-cache-directory-private!)
-  (storage-profile #:init-value "collab"
-                   #:getter get-storage-profile)
-  (access-token    #:init-value (getenv "ACCESSTOKEN")
-                   #:getter get-access-token
-                   #:setter set-access-token-private!)
-  (google-project  #:init-value #f
-                   #:getter get-google-project
-                   #:setter set-google-project-private!)
-  (google-region  #:init-value #f
-                   #:getter get-google-region
-                   #:setter set-google-region-private!))
+  (project-code         #:init-value #f
+                        #:getter get-project-code
+                        #:setter set-project-code-private!)
+
+  (store-directory      #:init-value (string-append (getcwd) "/store")
+                        #:getter get-store-directory
+                        #:setter set-store-directory-private!)
+
+  (tmpdir               #:init-value (getenv "TMPDIR")
+                        #:getter get-tmpdir
+                        #:setter set-tmpdir-private!)
+
+  (cache-directory      #:init-value #f
+                        #:getter get-cache-directory
+                        #:setter set-cache-directory-private!)
+
+  (storage-profile      #:init-value "collab"
+                        #:getter get-storage-profile)
+
+  (access-token         #:init-value (getenv "ACCESSTOKEN")
+                        #:getter get-access-token
+                        #:setter set-access-token-private!)
+
+  (google-project       #:init-value #f
+                        #:getter get-google-project
+                        #:setter set-google-project-private!)
+
+  (google-region        #:init-value #f
+                        #:getter get-google-region
+                        #:setter set-google-region-private!)
+
+  (simultaneous-donors  #:init-value 2
+                        #:getter get-simultaneous-donors
+                        #:setter set-simultaneous-donors-private!))
 
 (define %pcawg-config (make <pcawg-config>))
 
@@ -77,6 +90,7 @@
 
 (make-getter 'storage-profile)
 (for-each make-getter/setter '(project-code
+                               simultaneous-donors
                                store-directory
                                access-token
                                google-region

@@ -28,6 +28,7 @@
     (google-region       (single-char #\r) (value #t))
     (project-code        (single-char #\p) (value #t))
     (store-directory     (single-char #\s) (value #t))
+    (simultaneous-donors (single-char #\t) (value #t))
     (help                (single-char #\h) (value #f))
     (version             (single-char #\v) (value #f))))
 
@@ -40,6 +41,7 @@
      "  --google-region=ARG        -r  The storage region to use."
      "  --project-code=ARG         -p  Which PCAWG project to process."
      "  --store-directory=ARG      -s  Where to store the data."
+     "  --simultaneous-donors=ARG  -t  Number of donors to process in parallel."
      "  --help                     -h  Show this message."
      "  --version                  -v  Show versioning information."))
   (exit 0))
@@ -97,7 +99,7 @@
   (lambda _
     (let* ((metadata (metadata-for-project (project-code)))
            (donors   (donors-in-project metadata)))
-      (n-par-for-each 2
+      (n-par-for-each (simultaneous-donors)
        (lambda (donor-id)
          (format #t "Processing ~a~%" donor-id)
          (let ((files (files-for-donor donor-id metadata)))

@@ -139,6 +139,8 @@
           (if (zero? (status:exit-val (close-pipe port)))
               (call-with-output-file split-completed
                 (lambda (port)
+                  (format port "Deleting ~s.~%" bam-file)
+                  (delete-file bam-file)
                   (format port "~a" split-output)
                   #t))
               (begin
@@ -153,35 +155,39 @@
                                 (string-suffix? ".bam" file)))))
     (mkdir-p fastq-dir)
     (format #t "Going to process:~%~{  - ~a~%~}~%" split-files)
-    (not (any not (map
-                   (lambda (file)
-                     (format #t "Unmapping ~s.~%" file)
-                     (let* ((parts          (string-split (basename file ".bam") #\_))
-                            (lane           (list-ref parts 2))
-                            (dest-filename  (format #f  "~a/~a_NA_S1_L~3,,,'0@a"
-                                                    fastq-dir donor-full-name lane))
-                            (part-complete  (string-append dest-filename ".complete")))
-                       (if (file-exists? part-complete)
-                           #t
-                           (let* ((cmd          (format #f "~a sort -t ~a --tmpdir ~a -N ~a | ~a fastq -@ ~a - -1 ~a -2 ~a 2> ~a"
-                                                        %sambamba %threads
-                                                        (if (tmpdir) (tmpdir) "/tmp")
-                                                        (string-append dest-dir "/" file)
-                                                        %samtools %threads
-                                                        (string-append dest-filename "_R1_001.fastq.gz")
-                                                        (string-append dest-filename "_R2_001.fastq.gz")
-                                                        (string-append dest-filename ".log")))
-                                  (port         (open-input-pipe cmd))
-                                  (unmap-output (get-string-all port)))
-                             (if (zero? (status:exit-val (close-pipe port)))
-                                 (call-with-output-file part-complete
-                                     (lambda (port)
-                                       (format port "~a" unmap-output)
-                                       #t))
-                                 (begin
-                                   (format #t "Sorting and writing to FASTQ for ~s failed.~%" file)
-                                   #f))))))
-                   split-files)))))
+    (not (any not
+              (map
+               (lambda (file)
+                 (format #t "Unmapping ~s.~%" file)
+                 (let* ((parts          (string-split (basename file ".bam") #\_))
+                        (lane           (list-ref parts 2))
+                        (dest-filename  (format #f  "~a/~a_NA_S1_L~3,,,'0@a"
+                                                fastq-dir donor-full-name lane))
+                        (part-complete  (string-append dest-filename ".complete")))
+                   (if (file-exists? part-complete)
+                       #t
+                       (let* ((input-file   (string-append dest-dir "/" file))
+                              (cmd          (format #f "~a sort -t ~a --tmpdir ~a -N ~a | ~a fastq -@ ~a - -1 ~a -2 ~a 2> ~a"
+                                                    %sambamba %threads
+                                                    (if (tmpdir) (tmpdir) "/tmp")
+                                                    input-file
+                                                    %samtools %threads
+                                                    (string-append dest-filename "_R1_001.fastq.gz")
+                                                    (string-append dest-filename "_R2_001.fastq.gz")
+                                                    (string-append dest-filename ".log")))
+                              (port         (open-input-pipe cmd))
+                              (unmap-output (get-string-all port)))
+                         (if (zero? (status:exit-val (close-pipe port)))
+                             (call-with-output-file part-complete
+                               (lambda (port)
+                                 (format port "Deleting ~s.~%" input-file)
+                                 (delete-file input-file)
+                                 (format port "~a" unmap-output)
+                                 #t))
+                             (begin
+                               (format #t "Sorting and writing to FASTQ for ~s failed.~%" file)
+                               #f))))))
+               split-files)))))
 
 (define (make-google-bucket donor-full-name)
   (let ((name (string-append "gs://run-"  (string-downcase donor-full-name) "-umc1")))
@@ -198,15 +204,30 @@
   (let ((bucket (make-google-bucket donor-full-name)))
     (if (not bucket)
         #f
-        (not (any not (map (lambda (file)
-                             (zero? (system
-                                     (string-append
-                                      %gsutil " cp "
-                                      bucket "/aligner/samples/"
-                                      donor-full-name "/" file))))
-                           (scandir fastq-dir
-                                    (lambda (file)
-                                      (string-suffix? ".fastq.gz" file)))))))))
+        (not (any not
+                  (map (lambda (file)
+                         (let* ((name (string-append fastq-dir "/" file))
+                                (comp (string-append name ".uploaded")))
+                           (if (file-exists? comp)
+                               #t
+                               (let* ((cmd  (string-append
+                                             %gsutil " cp " name " " bucket
+                                             "/aligner/samples/"
+                                             donor-full-name "/" file))
+                                      (port (open-input-pipe cmd))
+                                      (out  (get-string-all port)))
+                                 (if (zero? (status:exit-val (close-pipe port)))
+                                     (call-with-output-file comp
+                                       (lambda (port)
+                                         (format port "Deleting ~s.~%" name)
+                                         (delete-file name)
+                                         (format port "~a" out)
+                                         #t))
+                                     (begin
+                                       (format #t "Uploading ~s failed." name)))))))
+                         (scandir fastq-dir
+                                  (lambda (file)
+                                    (string-suffix? ".fastq.gz" file)))))))))
 
 (define (bam->fastq file-data)
   (let* ((donor         (assoc-ref file-data 'donor-id))
@@ -229,4 +250,3 @@
       #f]
      [(not (upload-to-the-conglomerates-daughter fastq-dir donor-full-name))
       #f])))
-

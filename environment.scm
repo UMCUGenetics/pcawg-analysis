@@ -15,6 +15,7 @@
 
 (use-modules (guix packages)
              ((guix licenses) #:prefix license:)
+             (gnu packages admin)
              (gnu packages autotools)
              (gnu packages bioinformatics)
              (gnu packages certs)
@@ -94,6 +95,8 @@
       ("google-cloud-sdk" ,google-cloud-sdk)
       ("openjdk" ,openjdk11)
       ("curl" ,curl)))
+   (propagated-inputs
+    `(("net-base" ,net-base))) ; This is a “fix” for the Docker container.
    (home-page #f)
    (synopsis "Tools to “do” the PCAWG analysis.")
    (description "This package is purely used for a personal task.")

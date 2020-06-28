@@ -167,7 +167,7 @@
                    (if (file-exists? part-complete)
                        #t
                        (let* ((input-file   (string-append dest-dir "/" file))
-                              (cmd          (format #f "~a sort -t ~a --tmpdir ~a -N ~a /dev/stdout | ~a fastq -@ ~a - -1 ~a -2 ~a 2> ~a"
+                              (cmd          (format #f "~a sort -t ~a --tmpdir ~a -N ~a -o /dev/stdout | ~a fastq -@ ~a - -1 ~a -2 ~a 2> ~a"
                                                     %sambamba %threads
                                                     (if (tmpdir) (tmpdir) "/tmp")
                                                     input-file

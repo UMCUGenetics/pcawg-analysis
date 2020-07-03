@@ -68,6 +68,13 @@ if test "x$GSUTIL" = "x"; then
    AC_MSG_ERROR([Cannot find gsutil.])
 fi
 
+dnl Test whether the "gcloud" command is somewhere in path.
+dnl ---------------------------------------------------------------------------
+AC_PATH_PROG([GCLOUD], [gcloud])
+if test "x$GCLOUD" = "x"; then
+   AC_MSG_ERROR([Cannot find gcloud.])
+fi
+
 AC_CONFIG_FILES([env], [chmod +x env])
 AC_CONFIG_FILES([acontrol], [chmod +x acontrol])
 AC_CONFIG_FILES([Makefile pcawg/tools.scm])

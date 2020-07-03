@@ -18,6 +18,7 @@ include guile.am
 SOURCES =              \
   pcawg/config.scm     \
   pcawg/dcc-portal.scm \
+  pcawg/google.scm     \
   pcawg/filesystem.scm \
   pcawg/tools.scm
 

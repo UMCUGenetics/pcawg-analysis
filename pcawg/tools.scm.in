@@ -21,6 +21,7 @@
             %sambamba
             %curl
             %gsutil
+            %gcloud
             %threads))
 
 (define %score-client "@SCORECLIENT@")
@@ -28,5 +29,6 @@
 (define %sambamba     "@SAMBAMBA@")
 (define %curl         "@CURL@")
 (define %gsutil       "@GSUTIL@")
+(define %gcloud       "@GCLOUD@")
 (define %threads      (total-processor-count))
 

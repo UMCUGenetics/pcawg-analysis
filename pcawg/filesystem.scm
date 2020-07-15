@@ -15,12 +15,14 @@
 
 (define-module (pcawg filesystem)
   #:use-module (ice-9 binary-ports)
-  #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 format)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
+  #:use-module (ice-9 string-fun)
+  #:use-module (ice-9 textual-ports)
+  #:use-module (ice-9 threads)
   #:use-module (json)
   #:use-module (pcawg config)
   #:use-module (pcawg dcc-portal)
@@ -189,8 +191,11 @@
                                #f))))))
                split-files)))))
 
+(define (name-google-bucket donor-full-name)
+  (string-append "gs://run-" (string-downcase donor-full-name) "-umc1"))
+
 (define (make-google-bucket donor-full-name)
-  (let ((name (string-append "gs://run-"  (string-downcase donor-full-name) "-umc1")))
+  (let ((name (name-google-bucket donor-full-name)))
     (if (zero? (system (string-append
                         %gsutil " mb"
                         " -p " (google-project)
@@ -199,6 +204,11 @@
                         name)))
         name
         #f)))
+
+(define (bucket-exists? bucket)
+  (zero?
+   (system
+    (string-append %gsutil " ls " bucket " > /dev/null 2> /dev/null"))))
 
 (define (upload-to-the-conglomerates-daughter fastq-dir donor-full-name)
   (let ((bucket (make-google-bucket donor-full-name)))
@@ -229,6 +239,73 @@
                                   (lambda (file)
                                     (string-suffix? ".fastq.gz" file)))))))))
 
+(define (lanes-for-sample sample-name)
+  (catch #t
+    (lambda _
+      (let* ((port (open-input-pipe
+                    (string-append %gsutil
+                     " ls gs://run-" (string-downcase sample-name)
+                     "-umc1/aligner/samples/" (string-upcase sample-name)
+                     "/*R1_001.fastq.gz")))
+             (out  (get-string-all port)))
+        (if (zero? (status:exit-val (close-pipe port)))
+            (let* ((sorted (sort (string-split out #\newline) string<))
+                   (lanes  (if (string= (car sorted) "") (cdr sorted) sorted)))
+              (map (lambda (file)
+                     ;; This whole construct assumes that the file is
+                     ;; formatted correctly.  That's why we wrapped this fine
+                     ;; piece in a catch construct.
+                     (let* ((parts       (string-split (basename file) #\_))
+                            (lane        (list-ref parts 3))
+                            (lane-number (string->number (substring lane 1)))
+                            (r1          (substring file 4))
+                            (r2          (string-replace-substring r1 "R1" "R2")))
+                       `((laneNumber       . ,(number->string lane-number))
+                         (firstOfPairPath  . ,r1)
+                         (secondOfPairPath . ,r2))))
+                   lanes))
+            #f)))
+    (lambda (key . args)
+      #f)))
+
+(define (panel-file donor-name)
+  (let ((filename  (string-append (donor-directory donor-name) "/panel.json"))
+        (tumor     (string-append donor-name "T"))
+        (reference (string-append donor-name "R")))
+    (call-with-output-file filename
+      (lambda (port)
+        (scm->json port `((tumor     . ((type  . "TUMOR")
+                                        (name  . ,tumor)
+                                        (lanes . ,(lanes-for-sample tumor))))
+                          (reference . ((type  . "REFERENCE")
+                                        (name  . ,reference)
+                                        (lanes . ,(lanes-for-sample reference))))))))
+    filename))
+
+(define (start-pipeline donor-name)
+  (let ((reference-bucket (name-google-bucket (string-append donor-name "R")))
+        (tumor-bucket     (name-google-bucket (string-append donor-name "T"))))
+    (cond
+     [(and (bucket-exists? reference-bucket)
+           (bucket-exists? tumor-bucket))
+      (let* ((logfile (lambda (file)
+                        (string-append
+                         (donor-directory donor-name) "/" file)))
+             (port (open-input-pipe
+                    (string-append
+                     %java " -jar " (pipeline-jar)
+                           " -profile development"
+                           " -set_id " donor-name
+                           " -run_id from-jar"
+                           " -sample_json " (panel-file donor-name)
+                           " -cloud_sdk " (string-drop-right
+                                           (dirname %gcloud) 4)
+                           " > " (logfile "/pipeline5.log")
+                           " 2> "(logfile "/pipeline5.errors")))))
+        (zero? (status:exit-val (close-pipe port))))]
+     [else
+      #f])))
+
 (define (bam->fastq file-data)
   (let* ((donor         (assoc-ref file-data 'donor-id))
          (specimen-type (assoc-ref file-data 'specimen-type))
@@ -249,4 +326,6 @@
      [(not (read-groups->fastq dest-dir fastq-dir donor-full-name))
       #f]
      [(not (upload-to-the-conglomerates-daughter fastq-dir donor-full-name))
+      #f]
+     [(not (start-pipeline donor))
       #f])))

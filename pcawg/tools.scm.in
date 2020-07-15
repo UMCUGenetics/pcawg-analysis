@@ -22,6 +22,7 @@
             %curl
             %gsutil
             %gcloud
+            %java
             %threads))
 
 (define %score-client "@SCORECLIENT@")
@@ -30,5 +31,5 @@
 (define %curl         "@CURL@")
 (define %gsutil       "@GSUTIL@")
 (define %gcloud       "@GCLOUD@")
+(define %java         "@JAVA@")
 (define %threads      (total-processor-count))
-

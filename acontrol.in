@@ -26,6 +26,7 @@
     (cache-directory     (single-char #\c) (value #t))
     (google-project      (single-char #\g) (value #t))
     (google-region       (single-char #\r) (value #t))
+    (pipeline-jar        (single-char #\j) (value #t))
     (project-code        (single-char #\p) (value #t))
     (store-directory     (single-char #\s) (value #t))
     (simultaneous-donors (single-char #\t) (value #t))
@@ -39,6 +40,7 @@
      "  --cache-dir=ARG            -c  Cache directory for HTTP requests."
      "  --google-project=ARG       -g  The Google project ID."
      "  --google-region=ARG        -r  The storage region to use."
+     "  --pipeline-jar=ARG         -j  Location of the JAR file for pipeline5."
      "  --project-code=ARG         -p  Which PCAWG project to process."
      "  --store-directory=ARG      -s  Where to store the data."
      "  --simultaneous-donors=ARG  -t  Number of donors to process in parallel."
@@ -71,6 +73,9 @@
 (when (assoc-ref %config 'project-code)
   (set-project-code! (assoc-ref %config 'project-code)))
 
+(when (assoc-ref %config 'pipeline-jar)
+  (set-pipeline-jar! (assoc-ref %config 'pipeline-jar)))
+
 (when (assoc-ref %config 'store-directory)
   (set-store-directory! (assoc-ref %config 'store-directory)))
 
@@ -94,6 +99,10 @@
 (unless (project-code)
   (format #t "Please specify which project to process.~%")
   (exit 1))
+
+(unless (pipeline-jar)
+  (format #t "Please specify the location of the pipeline JAR.")
+  (exit 0))
 
 (catch 'json-invalid
   (lambda _

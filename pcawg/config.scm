@@ -19,11 +19,13 @@
             cache-directory
             google-project
             google-region
+            pipeline-jar
             project-code
             set-access-token!
             set-cache-directory!
             set-google-project!
             set-google-region!
+            set-pipeline-jar!
             set-project-code!
             set-simultaneous-donors!
             set-store-directory!
@@ -64,6 +66,10 @@
                         #:getter get-google-project
                         #:setter set-google-project-private!)
 
+  (pipeline-jar         #:init-value #f
+                        #:getter get-pipeline-jar
+                        #:setter set-pipeline-jar-private!)
+
   (google-region        #:init-value #f
                         #:getter get-google-region
                         #:setter set-google-region-private!)
@@ -95,5 +101,6 @@
                                access-token
                                google-region
                                google-project
+                               pipeline-jar
                                tmpdir
                                cache-directory))

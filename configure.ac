@@ -75,6 +75,13 @@ if test "x$GCLOUD" = "x"; then
    AC_MSG_ERROR([Cannot find gcloud.])
 fi
 
+dnl Test whether the "java" command is somewhere in path.
+dnl ---------------------------------------------------------------------------
+AC_PATH_PROG([JAVA], [java])
+if test "x$JAVA" = "x"; then
+   AC_MSG_ERROR([Cannot find java.])
+fi
+
 AC_CONFIG_FILES([env], [chmod +x env])
 AC_CONFIG_FILES([acontrol], [chmod +x acontrol])
 AC_CONFIG_FILES([Makefile pcawg/tools.scm])

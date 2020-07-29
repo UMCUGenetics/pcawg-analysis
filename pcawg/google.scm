@@ -20,7 +20,8 @@
   #:use-module (pcawg tools)
   #:use-module (logger)
 
-  #:export (may-run-pipeline-run?))
+  #:export (bucket-exists?
+            may-run-pipeline-run?))
 
 ;; Quota management.
 ;; ----------------------------------------------------------------------------
@@ -59,7 +60,7 @@
             (local-ssd-space  . "LOCAL_SSD_TOTAL_GB")
             (n2d-cpus         . "N2D_CPUS")))
 
-;; Advisory functions
+;; Advisory functions.
 ;; ----------------------------------------------------------------------------
 (define (may-run-pipeline-run? region lanes cpus-per-lane)
   (catch #t
@@ -71,3 +72,11 @@
         (> available (* lanes cpus-per-lane))))
     (lambda (key . args)
       #f)))
+
+;; Other utils.
+;; ----------------------------------------------------------------------------
+
+(define (bucket-exists? bucket)
+  (zero?
+   (system
+    (string-append %gsutil " ls " bucket " > /dev/null 2> /dev/null"))))

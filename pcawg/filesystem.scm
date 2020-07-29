@@ -212,11 +212,6 @@
         name
         #f)))
 
-(define (bucket-exists? bucket)
-  (zero?
-   (system
-    (string-append %gsutil " ls " bucket " > /dev/null 2> /dev/null"))))
-
 (define (upload-to-the-conglomerates-daughter fastq-dir donor-full-name)
   (let ((bucket (make-google-bucket donor-full-name)))
     (if (not bucket)

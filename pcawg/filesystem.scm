@@ -26,6 +26,7 @@
   #:use-module (json)
   #:use-module (pcawg config)
   #:use-module (pcawg dcc-portal)
+  #:use-module (pcawg hartwig)
   #:use-module (pcawg tools)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
@@ -34,12 +35,13 @@
   #:use-module (web uri)
   #:use-module (logger)
 
-  #:export (mkdir-p
-            file-id-directory
-            filename-by-file-data
+  #:export (bam->fastq
             donor-directory
             download-file
-            bam->fastq))
+            file-id-directory
+            filename-by-file-data
+            lanes-for-sample
+            mkdir-p))
 
 ;; Filesystem management
 ;; ----------------------------------------------------------------------------
@@ -194,23 +196,9 @@
                              (begin
                                (log-debug "read-groups->fastq"
                                           "Sorting and writing to FASTQ for ~s failed."
-                                          file))
+                                          file)
                                #f))))))
                split-files)))))
-
-(define (name-google-bucket donor-full-name)
-  (string-append "gs://run-" (string-downcase donor-full-name) "-umc1"))
-
-(define (make-google-bucket donor-full-name)
-  (let ((name (name-google-bucket donor-full-name)))
-    (if (zero? (system (string-append
-                        %gsutil " mb"
-                        " -p " (google-project)
-                        " -l " (google-region)
-                        " -c STANDARD "
-                        name)))
-        name
-        #f)))
 
 (define (upload-to-the-conglomerates-daughter fastq-dir donor-full-name)
   (let ((bucket (make-google-bucket donor-full-name)))
@@ -271,44 +259,6 @@
     (lambda (key . args)
       #f)))
 
-(define (panel-file donor-name)
-  (let ((filename  (string-append (donor-directory donor-name) "/panel.json"))
-        (tumor     (string-append donor-name "T"))
-        (reference (string-append donor-name "R")))
-    (call-with-output-file filename
-      (lambda (port)
-        (scm->json port `((tumor     . ((type  . "TUMOR")
-                                        (name  . ,tumor)
-                                        (lanes . ,(lanes-for-sample tumor))))
-                          (reference . ((type  . "REFERENCE")
-                                        (name  . ,reference)
-                                        (lanes . ,(lanes-for-sample reference))))))))
-    filename))
-
-(define (start-pipeline donor-name)
-  (let ((reference-bucket (name-google-bucket (string-append donor-name "R")))
-        (tumor-bucket     (name-google-bucket (string-append donor-name "T"))))
-    (cond
-     [(and (bucket-exists? reference-bucket)
-           (bucket-exists? tumor-bucket))
-      (let* ((logfile (lambda (file)
-                        (string-append
-                         (donor-directory donor-name) "/" file)))
-             (port (open-input-pipe
-                    (string-append
-                     %java " -jar " (pipeline-jar)
-                           " -profile development"
-                           " -set_id " donor-name
-                           " -run_id from-jar"
-                           " -sample_json " (panel-file donor-name)
-                           " -cloud_sdk " (string-drop-right
-                                           (dirname %gcloud) 4)
-                           " > " (logfile "/pipeline5.log")
-                           " 2> "(logfile "/pipeline5.errors")))))
-        (zero? (status:exit-val (close-pipe port))))]
-     [else
-      #f])))
-
 (define (bam->fastq file-data)
   (let* ((donor         (assoc-ref file-data 'donor-id))
          (specimen-type (assoc-ref file-data 'specimen-type))
@@ -330,5 +280,5 @@
       #f]
      [(not (upload-to-the-conglomerates-daughter fastq-dir donor-full-name))
       #f]
-     [(not (start-pipeline donor))
+     [(not (queue-pipeline donor))
       #f])))

@@ -45,14 +45,13 @@
 
 ;; Convenience methods for quota management.
 ;; ----------------------------------------------------------------------------
-(define (make-availability-shorthand symbol identifier)
-  (primitive-eval `(define-public (,(symbol-append 'available- symbol) region)
-                     (quota-usage region ,identifier))))
-
 ;; This will generate the functions:
 ;; ‘available-cpus’, ‘available-preemptible-cpus’, etc..
+
 (for-each (lambda (pair)
-            (make-availability-shorthand (car pair) (cdr pair)))
+            (primitive-eval
+             `(define-public (,(symbol-append 'available- (car pair)) region)
+                (quota-usage region ,(cdr pair)))))
           '((cpus             . "CPUS")
             (preemptible-cpus . "PREEMPTIBLE_CPUS")
             (disk-space       . "DISKS_TOTAL_GB")

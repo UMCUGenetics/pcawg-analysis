@@ -11,9 +11,10 @@
 (use-modules (ice-9 getopt-long)
              (ice-9 threads)
              (logger)
+             (pcawg config)
              (pcawg dcc-portal)
              (pcawg filesystem)
-             (pcawg config))
+             (pcawg hartwig))
 
 ;; ---------------------------------------------------------------------------
 ;; COMMAND-LINE PARSING
@@ -119,6 +120,10 @@
   (lambda _
     (let* ((metadata (metadata-for-project (project-code)))
            (donors   (donors-in-project metadata)))
+      ;; Start the GCP queuing in the background.
+      (call-with-new-thread process-queue)
+
+      ;; Do Pre-processing for donors.
       (n-par-for-each (simultaneous-donors)
        (lambda (donor-id)
          (format #t "Processing ~a~%" donor-id)

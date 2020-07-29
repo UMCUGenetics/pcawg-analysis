@@ -293,7 +293,7 @@
                          (donor-directory donor-name) "/" file)))
              (port (open-input-pipe
                     (string-append
-                     %java " -jar " (pipeline-jar)
+                     %java " -jar " %hmf-pipeline
                            " -profile development"
                            " -set_id " donor-name
                            " -run_id from-jar"

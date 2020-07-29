@@ -16,13 +16,14 @@
 (define-module (pcawg tools)
   #:use-module (ice-9 threads)
   #:use-module (pcawg config)
-  #:export (%score-client
-            %samtools
-            %sambamba
-            %curl
-            %gsutil
+  #:export (%curl
             %gcloud
+            %gsutil
+            %hmf-pipeline
             %java
+            %sambamba
+            %samtools
+            %score-client
             %threads))
 
 (define %score-client "@SCORECLIENT@")
@@ -32,4 +33,5 @@
 (define %gsutil       "@GSUTIL@")
 (define %gcloud       "@GCLOUD@")
 (define %java         "@JAVA@")
+(define %hmf-pipeline "@HMF_PIPELINE@")
 (define %threads      (total-processor-count))

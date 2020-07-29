@@ -10,6 +10,7 @@
 
 (use-modules (ice-9 getopt-long)
              (ice-9 threads)
+             (logger)
              (pcawg dcc-portal)
              (pcawg filesystem)
              (pcawg config))
@@ -24,6 +25,8 @@
 (define program-options
   '((access-token        (single-char #\a) (value #t))
     (cache-directory     (single-char #\c) (value #t))
+    (debug-log           (single-char #\d) (value #t))
+    (error-log           (single-char #\e) (value #t))
     (google-project      (single-char #\g) (value #t))
     (google-region       (single-char #\r) (value #t))
     (pipeline-jar        (single-char #\j) (value #t))
@@ -38,6 +41,8 @@
    '("This is acontrol."
      "  --access-token=ARG         -a  The ICGC access token."
      "  --cache-dir=ARG            -c  Cache directory for HTTP requests."
+     "  --debug-log                -d  Where to write the debug log."
+     "  --error-log                -e  Where to write the error log."
      "  --google-project=ARG       -g  The Google project ID."
      "  --google-region=ARG        -r  The storage region to use."
      "  --pipeline-jar=ARG         -j  Location of the JAR file for pipeline5."
@@ -78,6 +83,12 @@
 
 (when (assoc-ref %config 'store-directory)
   (set-store-directory! (assoc-ref %config 'store-directory)))
+
+(when (assoc-ref %config 'debug-log)
+  (set-default-debug-port! (assoc-ref %config 'debug-log)))
+
+(when (assoc-ref %config 'error-log)
+  (set-default-error-port! (assoc-ref %config 'error-log)))
 
 ;; ---------------------------------------------------------------------------
 ;; ENVIRONMENT VARIABLES

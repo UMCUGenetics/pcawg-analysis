@@ -18,6 +18,7 @@
   #:use-module (ice-9 popen)
   #:use-module (json)
   #:use-module (pcawg tools)
+  #:use-module (logger)
 
   #:export (may-run-pipeline-run?))
 
@@ -38,7 +39,7 @@
                                    #f))
                              quotas)))))
     (lambda (key . args)
-      (format #t "Error: ~a: ~s~%" key args)
+      (log-error "quota-usage" "Error: ~a: ~s" key args)
       '())))
 
 ;; Convenience methods for quota management.

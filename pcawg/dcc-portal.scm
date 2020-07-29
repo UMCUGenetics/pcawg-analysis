@@ -23,6 +23,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (json)
   #:use-module (pcawg config)
+  #:use-module (logger)
 
   #:export (metadata-for-project
             manifest-for-file-id
@@ -82,7 +83,7 @@
                                                  "specimenType"))))))))
            (vector->list metadata)))
     (lambda (key . args)
-      (format #t "Unexpected metadata structure.~%")
+      (log-error "restructure-metadata" "Unexpected metadata structure.")
       #f)))
 
 (define (metadata-for-project project-code)
@@ -109,7 +110,9 @@
                   (let ((data (json->scm port)))
                     (restructure-metadata data)))
                 (begin
-                  (format #t "Response code was ~a~%" (response-code header))
+                  (log-error "metadata-for-project"
+                             "Response code was ~a"
+                             (response-code header))
                   #f)))))))
 
 (define (donors-in-project metadata)

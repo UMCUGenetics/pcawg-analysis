@@ -32,6 +32,7 @@
   #:use-module (web client)
   #:use-module (web response)
   #:use-module (web uri)
+  #:use-module (logger)
 
   #:export (mkdir-p
             file-id-directory
@@ -101,7 +102,7 @@
      [(file-exists? (string-append filename ".complete"))
       #t]
      [(not object-id)
-      (format #t "Couldn't get object ID for ~s.~%" file-id)
+      (log-error "download-file" "Couldn't get object ID for ~s." file-id)
       #f]
      [else
       (let* ((cmd  (format #f "~a url --object-id ~s" %score-client object-id))
@@ -119,11 +120,12 @@
                   (call-with-output-file (string-append filename ".complete")
                     (lambda (port) (format port "~a" cmd) #t))
                   (begin
-                    (format #t "Expected ~a bytes.~%Received ~a bytes.~%"
-                            expected-size bytes-received)
+                    (log-error "download-file"
+                               "Expected ~a bytes.~%Received ~a bytes for ~s."
+                               expected-size bytes-received object-id)
                     #f)))
             (begin
-              (format #t "Couldn't get URL for ~s.~%" file-id)
+              (log-error "download-file" "Couldn't get URL for ~s." object-id)
               #f)))])))
 
 (define (bam->read-groups bam-file split-completed dest-dir donor-full-name)
@@ -146,8 +148,9 @@
                   (format port "~a" split-output)
                   #t))
               (begin
-                (format #t "Splitting the BAM files in read groups failed with:~%~a~%"
-                        split-output)
+                (log-error "bam->read-groups"
+                           "Splitting the BAM files in read groups failed with:~%~a"
+                           split-output)
                 #f))))))
 
 (define (read-groups->fastq dest-dir fastq-dir donor-full-name)
@@ -156,11 +159,13 @@
                               (lambda (file)
                                 (string-suffix? ".bam" file)))))
     (mkdir-p fastq-dir)
-    (format #t "Going to process:~%~{  - ~a~%~}~%" split-files)
+    (log-debug "read-groups->fastq"
+               "Going to process:~%~{  - ~a~%~}"
+               split-files)
     (not (any not
               (map
                (lambda (file)
-                 (format #t "Unmapping ~s.~%" file)
+                 (log-debug "read-groups->fastq" "Unmapping ~s." file)
                  (let* ((parts          (string-split (basename file ".bam") #\_))
                         (lane           (list-ref parts 2))
                         (dest-filename  (format #f  "~a/~a_NA_S1_L~3,,,'0@a"
@@ -187,7 +192,9 @@
                                  (format port "~a" unmap-output)
                                  #t))
                              (begin
-                               (format #t "Sorting and writing to FASTQ for ~s failed.~%" file)
+                               (log-debug "read-groups->fastq"
+                                          "Sorting and writing to FASTQ for ~s failed."
+                                          file))
                                #f))))))
                split-files)))))
 
@@ -234,10 +241,11 @@
                                          (format port "~a" out)
                                          #t))
                                      (begin
-                                       (format #t "Uploading ~s failed." name)))))))
-                         (scandir fastq-dir
-                                  (lambda (file)
-                                    (string-suffix? ".fastq.gz" file)))))))))
+                                       (log-debug "upload-to-the-conglomerates-daughter"
+                                                  "Uploading ~s failed." name)))))))
+                       (scandir fastq-dir
+                                (lambda (file)
+                                  (string-suffix? ".fastq.gz" file)))))))))
 
 (define (lanes-for-sample sample-name)
   (catch #t

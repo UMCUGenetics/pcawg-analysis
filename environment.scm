@@ -31,8 +31,7 @@
              (guix build-system gnu)
              (guix download)
              (guix packages)
-             (umcu packages bioinformatics)
-             (umcu packages hmf))
+             (umcu packages bioinformatics))
 
 (define pcawg-analysis
   (package
@@ -94,7 +93,6 @@
       ("sambamba" ,sambamba)
       ("score-client" ,score-client)
       ("google-cloud-sdk" ,google-cloud-sdk)
-      ("hmf-google-pipeline" ,hmf-google-pipeline)
       ("openjdk" ,openjdk11)
       ("curl" ,curl)))
    (propagated-inputs

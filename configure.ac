@@ -82,22 +82,6 @@ if test "x$JAVA" = "x"; then
    AC_MSG_ERROR([Cannot find java.])
 fi
 
-dnl Let users provide a path to the the HMF pipeline because there is no
-dnl portable way to find it.
-dnl ---------------------------------------------------------------------------
-AC_ARG_WITH([hmf-pipeline-jar],
-  [AS_HELP_STRING([--with-hmf-pipeline-jar=PATH],
-                  [path to the hmf-pipeline JAR])],
-  HMF_PIPELINE="$withval")
-
-AC_MSG_CHECKING([for hmf-pipeline JAR])
-AC_MSG_RESULT([$HMF_PIPELINE])
-AC_SUBST([HMF_PIPELINE])
-
-if test "x$HMF_PIPELINE" = "x"; then
-   AC_MSG_ERROR([Cannot find HMF pipeline JAR.])
-fi
-
 AC_CONFIG_FILES([env], [chmod +x env])
 AC_CONFIG_FILES([acontrol], [chmod +x acontrol])
 AC_CONFIG_FILES([Makefile pcawg/tools.scm])

@@ -84,6 +84,7 @@
       #f)))
 
 (define (run-pipeline donor-name)
+  (log-debug "run-pipeline" "Running for ~s" donor-name)
   (let ((reference-bucket (name-google-bucket (string-append donor-name "R")))
         (tumor-bucket     (name-google-bucket (string-append donor-name "T"))))
     (cond

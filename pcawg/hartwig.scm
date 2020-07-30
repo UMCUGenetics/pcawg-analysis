@@ -21,6 +21,7 @@
   #:use-module (pcawg filesystem)
   #:use-module (pcawg tools)
   #:use-module (pcawg google)
+  #:use-module (logger)
 
   #:export (make-google-bucket
             name-google-bucket
@@ -115,6 +116,7 @@
   #t)
 
 (define (process-queue)
+  (log-debug "process-queue" "Doing another round of queue processing.")
   (cond
    [(null? %pipeline-queue)
     (sleep 30)

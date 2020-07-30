@@ -86,10 +86,12 @@
   (set-store-directory! (assoc-ref %config 'store-directory)))
 
 (when (assoc-ref %config 'debug-log)
-  (set-default-debug-port! (assoc-ref %config 'debug-log)))
+  (set-default-debug-port!
+   (open-file (assoc-ref %config 'debug-log) "a")))
 
 (when (assoc-ref %config 'error-log)
-  (set-default-error-port! (assoc-ref %config 'error-log)))
+  (set-default-error-port!
+   (open-file (assoc-ref %config 'error-log) "a")))
 
 ;; ---------------------------------------------------------------------------
 ;; ENVIRONMENT VARIABLES
@@ -116,6 +118,9 @@
   (format #t "Please specify the location of the pipeline JAR.")
   (exit 0))
 
+(log-debug "acontrol" "Started.")
+(log-error "acontrol" "Started.")
+
 (catch 'json-invalid
   (lambda _
     (let* ((metadata (metadata-for-project (project-code)))
@@ -124,9 +129,12 @@
       (call-with-new-thread process-queue)
 
       ;; Do Pre-processing for donors.
+      (log-debug "acontrol"
+                 "Processing ~a donors in parallel."
+                 (simultaneous-donors))
       (n-par-for-each (simultaneous-donors)
        (lambda (donor-id)
-         (format #t "Processing ~a~%" donor-id)
+         (log-debug "acontrol" "Processing ~a~%" donor-id)
          (let ((files (files-for-donor donor-id metadata)))
            (n-par-for-each 2 bam->fastq files)))
        donors)))

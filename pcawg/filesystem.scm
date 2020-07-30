@@ -43,6 +43,16 @@
             lanes-for-sample
             mkdir-p))
 
+;; Logging with return values.
+;; ----------------------------------------------------------------------------
+(define (step-completed step identifier)
+  (log-debug step "Completed for ~s" identifier)
+  #t)
+
+(define (step-failed step identifier)
+  (log-debug step "Failed for ~s" identifier)
+  #f)
+
 ;; Filesystem management
 ;; ----------------------------------------------------------------------------
 
@@ -102,10 +112,9 @@
          (filename      (filename-by-file-data file-data)))
     (cond
      [(file-exists? (string-append filename ".complete"))
-      #t]
+      (step-completed "download" filename)]
      [(not object-id)
-      (log-error "download-file" "Couldn't get object ID for ~s." file-id)
-      #f]
+      (step-failed "download" file-id)]
      [else
       (let* ((cmd  (format #f "~a url --object-id ~s" %score-client object-id))
              (port (open-input-pipe cmd))
@@ -120,19 +129,19 @@
               (close-pipe port)
               (if (= bytes-received expected-size)
                   (call-with-output-file (string-append filename ".complete")
-                    (lambda (port) (format port "~a" cmd) #t))
+                    (lambda (port)
+                      (format port "~a" cmd)
+                      (step-completed "download" object-id)))
                   (begin
                     (log-error "download-file"
                                "Expected ~a bytes.~%Received ~a bytes for ~s."
                                expected-size bytes-received object-id)
-                    #f)))
-            (begin
-              (log-error "download-file" "Couldn't get URL for ~s." object-id)
-              #f)))])))
+                    (step-failed "download" object-id))))
+            (step-failed "download" object-id)))])))
 
 (define (bam->read-groups bam-file split-completed dest-dir donor-full-name)
   (if (file-exists? split-completed)
-      #t
+      (step-completed "bam->read-groups" bam-file)
       (begin
         (mkdir-p dest-dir)
         (let* ((cmd (format #f "~a split -@ ~a -u /dev/null -f ~s ~s"
@@ -148,16 +157,16 @@
                   (format port "Deleting ~s.~%" bam-file)
                   (delete-file bam-file)
                   (format port "~a" split-output)
-                  #t))
+                  (step-completed "bam->read-groups" bam-file)))
               (begin
                 (log-error "bam->read-groups"
                            "Splitting the BAM files in read groups failed with:~%~a"
                            split-output)
-                #f))))))
+                (step-failed "bam->read-groups" bam-file)))))))
 
 (define (read-groups->fastq dest-dir fastq-dir donor-full-name)
   (if (file-exists? (string-append fastq-dir "/unmap_complete"))
-      #t
+      (step-completed "read-groups->fastq" fastq-dir)
       (let ((split-files (scandir dest-dir
                                   (lambda (file)
                                     (string-suffix? ".bam" file)))))
@@ -175,7 +184,7 @@
                                                     fastq-dir donor-full-name lane))
                             (part-complete  (string-append dest-filename ".complete")))
                        (if (file-exists? part-complete)
-                           #t
+                           (step-completed "read-groups->fastq" dest-filename)
                            (let* ((input-file   (string-append dest-dir "/" file))
                                   (cmd          (format #f "~a sort -t ~a --tmpdir ~a -N ~a -o /dev/stdout | ~a fastq -@ ~a - -1 ~a -2 ~a 2> ~a"
                                                         %sambamba %threads
@@ -193,12 +202,8 @@
                                      (format port "Deleting ~s.~%" input-file)
                                      (delete-file input-file)
                                      (format port "~a" unmap-output)
-                                     #t))
-                                 (begin
-                                   (log-debug "read-groups->fastq"
-                                              "Sorting and writing to FASTQ for ~s failed."
-                                              file)
-                                   #f))))))
+                                     (step-completed "read-groups->fastq" dest-filename)))
+                                 (step-failed "read-groups->fastq" file))))))
                    split-files))))))
 
 (define (upload-to-the-conglomerates-daughter fastq-dir donor-full-name)
@@ -207,7 +212,7 @@
      [(not bucket)
       #f]
      [(file-exists? (string-append fastq-dir "/upload_complete"))
-      #t]
+      (step-completed "upload" fastq-dir)]
      [else
       (not (any not
                 (map (lambda (file)
@@ -227,10 +232,8 @@
                                        (format port "Deleting ~s.~%" name)
                                        (delete-file name)
                                        (format port "~a" out)
-                                       #t))
-                                   (begin
-                                     (log-debug "upload-to-the-conglomerates-daughter"
-                                                "Uploading ~s failed." name)))))))
+                                       (step-completed "upload" name)))
+                                   (step-failed "upload" name))))))
                      (scandir fastq-dir
                               (lambda (file)
                                 (string-suffix? ".fastq.gz" file))))))])))

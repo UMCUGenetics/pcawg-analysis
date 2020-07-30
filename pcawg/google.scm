@@ -20,7 +20,14 @@
   #:use-module (pcawg tools)
   #:use-module (logger)
 
-  #:export (bucket-exists?
+  #:export (available-cpus
+            available-preemptible-cpus
+            available-disk-space
+            available-ssd-space
+            available-local-ssd-space
+            available-n2d-cpus
+
+            bucket-exists?
             may-run-pipeline-run?))
 
 ;; Quota management.
@@ -50,7 +57,7 @@
 
 (for-each (lambda (pair)
             (primitive-eval
-             `(define-public (,(symbol-append 'available- (car pair)) region)
+             `(define (,(symbol-append 'available- (car pair)) region)
                 (quota-usage region ,(cdr pair)))))
           '((cpus             . "CPUS")
             (preemptible-cpus . "PREEMPTIBLE_CPUS")

@@ -25,7 +25,8 @@
   #:export (make-google-bucket
             name-google-bucket
             panel-file
-            queue-pipeline))
+            queue-pipeline
+            process-queue))
 
 ;; We use a very simple queueing system for running pipelines.
 ;; The following two globals implement the queue state.

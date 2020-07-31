@@ -132,7 +132,7 @@
                  (simultaneous-donors))
       (n-par-for-each (simultaneous-donors)
        (lambda (donor-id)
-         (log-debug "acontrol" "Processing ~a~%" donor-id)
+         (log-debug "acontrol" "Processing ~a" donor-id)
          (let ((files (files-for-donor donor-id metadata)))
            (n-par-for-each 2 bam->fastq files)))
        donors)))

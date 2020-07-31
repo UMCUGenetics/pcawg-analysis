@@ -90,19 +90,20 @@
       (let* ((logfile (lambda (file)
                         (string-append
                          (donor-directory donor-name) "/" file)))
-             (port (open-input-pipe
-                    (string-append
-                     %java " -jar " (pipeline-jar)
-                           " -profile development"
-                           " -set_id " donor-name
-                           " -run_id from-jar"
-                           " -preemptible_vms true"
-                           " -max_concurrent_lanes " %max-concurrent-lanes
-                           " -sample_json " (panel-file donor-name)
-                           " -cloud_sdk " (string-drop-right
-                                           (dirname %gcloud) 4)
-                           " > " (logfile "/pipeline5.log")
-                           " 2> "(logfile "/pipeline5.errors")))))
+             (command (string-append
+                       %java " -jar " (pipeline-jar)
+                       " -profile development"
+                       " -set_id " donor-name
+                       " -run_id from-jar"
+                       " -preemptible_vms true"
+                       " -max_concurrent_lanes " %max-concurrent-lanes
+                       " -sample_json " (panel-file donor-name)
+                       " -cloud_sdk " (string-drop-right
+                                       (dirname %gcloud) 4)
+                       " > " (logfile "/pipeline5.log")
+                       " 2> "(logfile "/pipeline5.errors")))
+             (port (open-input-pipe command)))
+        (log-debug "run-pipeline" "Command:  ~a~%" command)
         (zero? (status:exit-val (close-pipe port))))]
      [else
       (log-debug "run-pipeline" "Retrying the pipeline run in 2 minutes.")

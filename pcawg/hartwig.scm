@@ -45,34 +45,41 @@
         #f)))
 
 (define (panel-file donor-name)
-  (let* ((filename        (string-append (donor-directory donor-name) "/panel.json"))
-         (tumor           (string-append donor-name "T"))
-         (reference       (string-append donor-name "R"))
-         (tumor-lanes     (lanes-for-sample tumor))
-         (reference-lanes (lanes-for-sample reference)))
-    (if (and tumor-lanes reference-lanes)
-        (begin
-          (unless (file-exists? filename)
-            (call-with-output-file filename
-              (lambda (port)
-                (scm->json port
-                 `((tumor     . ((type  . "TUMOR")
-                                 (name  . ,tumor)
-                                 (lanes . ,tumor-lanes)))
-                   (reference . ((type  . "REFERENCE")
-                                 (name  . ,reference)
-                                 (lanes . ,reference-lanes))))))))
-          filename)
-        #f)))
+  (let ((filename (string-append (donor-directory donor-name) "/panel.json")))
+    (if (file-exists? filename)
+        filename
+        (let* ((tumor           (string-append donor-name "T"))
+               (reference       (string-append donor-name "R"))
+               (tumor-lanes     (lanes-for-sample tumor))
+               (reference-lanes (lanes-for-sample reference)))
+          (log-debug "panel-file"
+                     "tumor-lanes: ~a."
+                     (list->vector tumor-lanes))
+          (if (and tumor-lanes reference-lanes)
+              (call-with-output-file filename
+                (lambda (port)
+                  (scm->json
+                   `((tumor     (type  . "TUMOR")
+                                (name  . ,tumor)
+                                (lanes . ,(list->vector tumor-lanes)))
+                     (reference (type  . "REFERENCE")
+                                (name  . ,reference)
+                                (lanes . ,(list->vector reference-lanes))))
+                   port)
+                  filename))
+              #f)))))
 
 (define (lanes-per-donor donor-name)
   (catch #t
     (lambda _
-      (call-with-input-file (panel-file donor-name)
-        (lambda (port)
-          (let* ((data (json->scm port)))
-            (+ (length (hash-ref (hash-ref data "tumor") "lanes"))
-               (length (hash-ref (hash-ref data "reference") "lanes")))))))
+      (let ((panel (panel-file donor-name)))
+        (if panel
+            (call-with-input-file panel
+              (lambda (port)
+                (let* ((data (json->scm port)))
+                  (+ (length (hash-ref (hash-ref data "tumor") "lanes"))
+                     (length (hash-ref (hash-ref data "reference") "lanes"))))))
+            (throw 'missing-panel-file))))
     (lambda (key . args)
       #f)))
 
@@ -90,6 +97,7 @@
       (let* ((logfile (lambda (file)
                         (string-append
                          (donor-directory donor-name) "/" file)))
+             (panel   (panel-file donor-name))
              (command (string-append
                        %java " -jar " (pipeline-jar)
                        " -profile development"
@@ -97,14 +105,17 @@
                        " -run_id from-jar"
                        " -preemptible_vms true"
                        " -max_concurrent_lanes " %max-concurrent-lanes
-                       " -sample_json " (panel-file donor-name)
+                       " -sample_json " panel
                        " -cloud_sdk " (string-drop-right
                                        (dirname %gcloud) 4)
                        " > " (logfile "/pipeline5.log")
-                       " 2> "(logfile "/pipeline5.errors")))
-             (port (open-input-pipe command)))
+                       " 2> "(logfile "/pipeline5.errors"))))
         (log-debug "run-pipeline" "Command:  ~a~%" command)
-        (zero? (status:exit-val (close-pipe port))))]
+        (let* ((port   (open-input-pipe command))
+               (status (zero? (status:exit-val (close-pipe port)))))
+          (log-debug "run-pipeline" "Pipeline ~a for ~s."
+                     (if status "completed" "failed")
+                     donor-name)))]
      [else
       (log-debug "run-pipeline" "Retrying the pipeline run in 2 minutes.")
       (sleep 120)

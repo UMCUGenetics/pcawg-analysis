@@ -246,9 +246,11 @@
                      "-umc1/aligner/samples/" (string-upcase sample-name)
                      "/*R1_001.fastq.gz")))
              (out  (get-string-all port)))
+        (log-debug "lanes-for-sample" "Found:~%~a" out)
         (if (zero? (status:exit-val (close-pipe port)))
             (let* ((sorted (sort (string-split out #\newline) string<))
                    (lanes  (if (string= (car sorted) "") (cdr sorted) sorted)))
+              (log-debug "lanes-for-sample" "Lanes: ~s" lanes)
               (map (lambda (file)
                      ;; This whole construct assumes that the file is
                      ;; formatted correctly.  That's why we wrapped this fine

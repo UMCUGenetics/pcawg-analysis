@@ -26,14 +26,7 @@
   #:export (make-google-bucket
             name-google-bucket
             panel-file
-            queue-pipeline
-            process-queue))
-
-;; We use a very simple queueing system for running pipelines.
-;; The following two globals implement the queue state.
-;; ----------------------------------------------------------------------------
-(define %queue-mutex (make-mutex))
-(define %pipeline-queue '())
+            run-pipeline))
 
 (define %max-concurrent-lanes 24)
 
@@ -86,10 +79,14 @@
 (define (run-pipeline donor-name)
   (log-debug "run-pipeline" "Running for ~s" donor-name)
   (let ((reference-bucket (name-google-bucket (string-append donor-name "R")))
-        (tumor-bucket     (name-google-bucket (string-append donor-name "T"))))
+        (tumor-bucket     (name-google-bucket (string-append donor-name "T")))
+        (lanes            (lanes-per-donor donor-name)))
+    (log-debug "run-pipeline" "Processing ~s lanes for ~s" lanes donor-name)
     (cond
      [(and (bucket-exists? reference-bucket)
-           (bucket-exists? tumor-bucket))
+           (bucket-exists? tumor-bucket)
+           lanes
+           (may-run-pipeline-run? (google-region) lanes %max-concurrent-lanes))
       (let* ((logfile (lambda (file)
                         (string-append
                          (donor-directory donor-name) "/" file)))
@@ -108,32 +105,6 @@
                            " 2> "(logfile "/pipeline5.errors")))))
         (zero? (status:exit-val (close-pipe port))))]
      [else
-      #f])))
-
-(define (queue-pipeline donor-name)
-  (lock-mutex %queue-mutex)
-  (set! %pipeline-queue (cons donor-name %pipeline-queue))
-  (unlock-mutex %queue-mutex)
-  #t)
-
-(define (process-queue)
-  (log-debug "process-queue" "Doing another round of queue processing.")
-  (cond
-   [(null? %pipeline-queue)
-    (sleep 30)
-    (process-queue)]
-   [else
-    (lock-mutex %queue-mutex)
-    (let* ((donor (car %pipeline-queue))
-           (lanes (lanes-per-donor donor)))
-      (if (and lanes (may-run-pipeline-run? (google-region)
-                                            lanes
-                                            %max-concurrent-lanes))
-          (begin
-            (call-with-new-thread (lambda _ (run-pipeline donor)))
-            (set! %pipeline-queue (cdr %pipeline-queue))
-            (process-queue))
-          (begin
-            (sleep 30)
-            (process-queue))))
-    (unlock-mutex %queue-mutex)]))
+      (log-debug "run-pipeline" "Retrying the pipeline run in 2 minutes.")
+      (sleep 120)
+      (run-pipeline donor-name)])))

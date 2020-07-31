@@ -207,36 +207,35 @@
                    split-files))))))
 
 (define (upload-to-the-conglomerates-daughter fastq-dir donor-full-name)
-  (let ((bucket (make-google-bucket donor-full-name)))
-    (cond
-     [(not bucket)
-      #f]
-     [(file-exists? (string-append fastq-dir "/upload_complete"))
-      (step-completed "upload" fastq-dir)]
-     [else
-      (not (any not
-                (map (lambda (file)
-                       (let* ((name (string-append fastq-dir "/" file))
-                              (comp (string-append name ".uploaded")))
-                         (if (file-exists? comp)
-                             #t
-                             (let* ((cmd  (string-append
-                                           %gsutil " cp " name " " bucket
-                                           "/aligner/samples/"
-                                           donor-full-name "/" file))
-                                    (port (open-input-pipe cmd))
-                                    (out  (get-string-all port)))
-                               (if (zero? (status:exit-val (close-pipe port)))
-                                   (call-with-output-file comp
-                                     (lambda (port)
-                                       (format port "Deleting ~s.~%" name)
-                                       (delete-file name)
-                                       (format port "~a" out)
-                                       (step-completed "upload" name)))
-                                   (step-failed "upload" name))))))
-                     (scandir fastq-dir
-                              (lambda (file)
-                                (string-suffix? ".fastq.gz" file))))))])))
+  (if (file-exists? (string-append fastq-dir "/upload_complete"))
+      (step-completed "upload" fastq-dir)
+      (let ((bucket (make-google-bucket donor-full-name)))
+        (cond
+         [(not bucket) #f]
+         [else
+          (not (any not
+                    (map (lambda (file)
+                           (let* ((name (string-append fastq-dir "/" file))
+                                  (comp (string-append name ".uploaded")))
+                             (if (file-exists? comp)
+                                 #t
+                                 (let* ((cmd  (string-append
+                                               %gsutil " cp " name " " bucket
+                                               "/aligner/samples/"
+                                               donor-full-name "/" file))
+                                        (port (open-input-pipe cmd))
+                                        (out  (get-string-all port)))
+                                   (if (zero? (status:exit-val (close-pipe port)))
+                                       (call-with-output-file comp
+                                         (lambda (port)
+                                           (format port "Deleting ~s.~%" name)
+                                           (delete-file name)
+                                           (format port "~a" out)
+                                           (step-completed "upload" name)))
+                                       (step-failed "upload" name))))))
+                         (scandir fastq-dir
+                                  (lambda (file)
+                                    (string-suffix? ".fastq.gz" file))))))]))))
 
 (define (lanes-for-sample sample-name)
   (catch #t
@@ -288,5 +287,6 @@
       #f]
      [(not (upload-to-the-conglomerates-daughter fastq-dir donor-full-name))
       #f]
-     [(not (queue-pipeline donor))
-      #f])))
+     [else
+      (call-with-new-thread (lambda _ (run-pipeline donor)))
+      #t])))

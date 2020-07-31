@@ -125,8 +125,6 @@
   (lambda _
     (let* ((metadata (metadata-for-project (project-code)))
            (donors   (donors-in-project metadata)))
-      ;; Start the GCP queuing in the background.
-      (call-with-new-thread process-queue)
 
       ;; Do Pre-processing for donors.
       (log-debug "acontrol"

@@ -29,7 +29,7 @@ bin_SCRIPTS     = acontrol
 
 # Build docker image with Guix
 docker: dist
-	guix pack -C none -e '(load "environment.scm")' \
+	guix pack -C gzip -e '(load "environment.scm")' \
              --with-source=pcawg-analysis-$(VERSION).tar.gz \
              --format=docker \
              -S /bin=bin -S /lib=lib -S /share=share -S /etc=etc -S /var=var \

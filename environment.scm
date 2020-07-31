@@ -85,7 +85,7 @@
       ("automake" ,automake)
       ("pkg-config" ,pkg-config)))
    (inputs
-    `(("guile" ,guile-3.0)
+    `(("guile" ,guile-3.0-latest)
       ("guile-json" ,guile-json-4)
       ("gnutls" ,gnutls)
       ("nss-certs" ,nss-certs)

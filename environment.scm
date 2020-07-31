@@ -36,7 +36,7 @@
 (define pcawg-analysis
   (package
    (name "pcawg-analysis")
-   (version "0.0.1")
+   (version "0.0.5")
    (source (origin
             (method url-fetch)
             (uri (string-append

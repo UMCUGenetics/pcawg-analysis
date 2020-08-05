@@ -77,14 +77,14 @@
             (call-with-input-file panel
               (lambda (port)
                 (let* ((data (json->scm port)))
-                  (+ (length (hash-ref (hash-ref data "tumor") "lanes"))
-                     (length (hash-ref (hash-ref data "reference") "lanes"))))))
+                  (+ (vector-length (assoc-ref (assoc-ref data "tumor") "lanes"))
+                     (vector-length (assoc-ref (assoc-ref data "reference") "lanes"))))))
             (throw 'missing-panel-file))))
     (lambda (key . args)
+      (log-debug "lanes-per-donor" "Thrown: ~a: ~s" key args)
       #f)))
 
 (define (run-pipeline donor-name)
-  (log-debug "run-pipeline" "Running for ~s" donor-name)
   (let ((reference-bucket (name-google-bucket (string-append donor-name "R")))
         (tumor-bucket     (name-google-bucket (string-append donor-name "T")))
         (lanes            (lanes-per-donor donor-name)))
@@ -104,7 +104,7 @@
                        " -set_id " donor-name
                        " -run_id from-jar"
                        " -preemptible_vms true"
-                       " -max_concurrent_lanes " %max-concurrent-lanes
+                       " -max_concurrent_lanes " (number->string %max-concurrent-lanes)
                        " -sample_json " panel
                        " -cloud_sdk " (string-drop-right
                                        (dirname %gcloud) 4)
@@ -117,6 +117,6 @@
                      (if status "completed" "failed")
                      donor-name)))]
      [else
-      (log-debug "run-pipeline" "Retrying the pipeline run in 2 minutes.")
+      (log-debug "run-pipeline" "Retrying the pipeline for ~s run in 2 minutes." donor-name)
       (sleep 120)
       (run-pipeline donor-name)])))

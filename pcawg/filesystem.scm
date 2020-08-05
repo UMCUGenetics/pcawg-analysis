@@ -258,7 +258,7 @@
                      (let* ((parts       (string-split (basename file) #\_))
                             (lane        (list-ref parts 3))
                             (lane-number (string->number (substring lane 1)))
-                            (r1          (substring file 4))
+                            (r1          (substring file 5))
                             (r2          (string-replace-substring r1 "R1" "R2")))
                        `((laneNumber       . ,(number->string lane-number))
                          (firstOfPairPath  . ,r1)

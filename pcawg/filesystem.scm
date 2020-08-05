@@ -269,17 +269,16 @@
       #f)))
 
 (define (bam->fastq file-data)
-  (let* ((donor         (assoc-ref file-data 'donor-id))
-         (specimen-type (assoc-ref file-data 'specimen-type))
-         (file-id       (assoc-ref file-data 'file-id))
-         (bam-file      (filename-by-file-data file-data))
+  (let* ((donor           (assoc-ref file-data 'donor-id))
+         (specimen-type   (assoc-ref file-data 'specimen-type))
+         (file-id         (assoc-ref file-data 'file-id))
+         (bam-file        (filename-by-file-data file-data))
          (basedir         (file-id-directory file-id))
          (dest-dir        (string-append basedir "/split"))
          (split-completed (string-append dest-dir "/complete"))
          (fastq-dir       (string-append basedir "/fastq"))
-         (sample-type     specimen-type)
          (donor-full-name (string-append donor
-                                         (if (eq? sample-type 'TUMOR) "T" "R"))))
+                                         (if (eq? specimen-type 'TUMOR) "T" "R"))))
     (cond
      [(not (download-file file-data))
       #f]

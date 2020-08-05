@@ -24,32 +24,40 @@
 ;
 
 (define program-options
-  '((access-token        (single-char #\a) (value #t))
-    (cache-directory     (single-char #\c) (value #t))
-    (debug-log           (single-char #\d) (value #t))
-    (error-log           (single-char #\e) (value #t))
-    (google-project      (single-char #\g) (value #t))
-    (google-region       (single-char #\r) (value #t))
-    (pipeline-jar        (single-char #\j) (value #t))
-    (project-code        (single-char #\p) (value #t))
-    (store-directory     (single-char #\s) (value #t))
-    (simultaneous-donors (single-char #\t) (value #t))
-    (help                (single-char #\h) (value #f))
-    (version             (single-char #\v) (value #f))))
+  '((access-token           (single-char #\a) (value #t))
+    (archive-bucket         (single-char #\b) (value #t))
+    (cache-directory        (single-char #\c) (value #t))
+    (debug-log              (single-char #\d) (value #t))
+    (error-log              (single-char #\e) (value #t))
+    (google-cmek-path       (single-char #\k) (value #t))
+    (google-service-account (single-char #\S) (value #t))
+    (google-project         (single-char #\g) (value #t))
+    (google-region          (single-char #\r) (value #t))
+    (pipeline-jar           (single-char #\j) (value #t))
+    (project-code           (single-char #\p) (value #t))
+    (report-bucket          (single-char #\B) (value #t))
+    (simultaneous-donors    (single-char #\t) (value #t))
+    (store-directory        (single-char #\s) (value #t))
+    (help                   (single-char #\h) (value #f))
+    (version                (single-char #\v) (value #f))))
 
 (define (show-help)
   (for-each (lambda (line) (display line) (newline))
    '("This is acontrol."
      "  --access-token=ARG         -a  The ICGC access token."
+     "  --archive-bucket=ARG       -b  The archive bucket to use."
      "  --cache-dir=ARG            -c  Cache directory for HTTP requests."
      "  --debug-log                -d  Where to write the debug log."
      "  --error-log                -e  Where to write the error log."
+     "  --google-cmek-path=ARG     -k  Path to the customer-managed encryption key."
      "  --google-project=ARG       -g  The Google project ID."
      "  --google-region=ARG        -r  The storage region to use."
+     "  --google-service-account=A -S  The service account to use."
      "  --pipeline-jar=ARG         -j  Location of the JAR file for pipeline5."
      "  --project-code=ARG         -p  Which PCAWG project to process."
-     "  --store-directory=ARG      -s  Where to store the data."
+     "  --report-bucket=ARG        -B  The patient report bucket to use."
      "  --simultaneous-donors=ARG  -t  Number of donors to process in parallel."
+     "  --store-directory=ARG      -s  Where to store the data."
      "  --help                     -h  Show this message."
      "  --version                  -v  Show versioning information."))
   (exit 0))
@@ -75,6 +83,18 @@
 
 (when (assoc-ref %config 'google-region)
   (set-google-region! (assoc-ref %config 'google-region)))
+
+(when (assoc-ref %config 'google-cmek-path)
+  (set-google-cmek-path! (assoc-ref %config 'google-cmek-path)))
+
+(when (assoc-ref %config 'archive-bucket)
+  (set-google-archive-bucket! (assoc-ref %config 'archive-bucket)))
+
+(when (assoc-ref %config 'report-bucket)
+  (set-google-report-bucket! (assoc-ref %config 'report-bucket)))
+
+(when (assoc-ref %config 'service-account)
+  (set-google-service-account! (assoc-ref %config 'service-account)))
 
 (when (assoc-ref %config 'project-code)
   (set-project-code! (assoc-ref %config 'project-code)))
@@ -109,6 +129,22 @@
 ;; ---------------------------------------------------------------------------
 ;;
 ;
+
+(unless (assoc-ref %config 'google-cmek-path)
+  (format #t "please specify the --google-cmek-path.")
+  (exit 1))
+
+(unless (assoc-ref %config 'archive-bucket)
+  (format #t "please specify the --archive-bucket.")
+  (exit 1))
+
+(unless (assoc-ref %config 'report-bucket)
+  (format #t "please specify the --report-bucket.")
+  (exit 1))
+
+(unless (assoc-ref %config 'service-account)
+  (format #t "please specify the --service-account.")
+  (exit 1))
 
 (unless (project-code)
   (format #t "Please specify which project to process.~%")

@@ -106,8 +106,13 @@
                        " -preemptible_vms true"
                        " -max_concurrent_lanes " (number->string %max-concurrent-lanes)
                        " -sample_json " panel
-                       " -cloud_sdk " (string-drop-right
-                                       (dirname %gcloud) 4)
+                       " -cloud_sdk " (dirname %gcloud)
+                       " -archive_bucket " (google-archive-bucket)
+                       " -patient_report_bucket " (google-report-bucket)
+                       " -region " (google-region)
+                       " -project " (google-project)
+                       " -cmek " (google-cmek-path)
+                       " -service_account_email " (google-service-account)
                        " > " (logfile "/pipeline5.log")
                        " 2> "(logfile "/pipeline5.errors"))))
         (log-debug "run-pipeline" "Command:  ~a~%" command)

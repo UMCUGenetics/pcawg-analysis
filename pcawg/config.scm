@@ -17,14 +17,22 @@
   #:use-module (oop goops)
   #:export (access-token
             cache-directory
+            google-archive-bucket
+            google-cmek-path
             google-project
             google-region
+            google-report-bucket
+            google-service-account
             pipeline-jar
             project-code
             set-access-token!
             set-cache-directory!
+            set-google-archive-bucket!
+            set-google-cmek-path!
             set-google-project!
             set-google-region!
+            set-google-report-bucket!
+            set-google-service-account!
             set-pipeline-jar!
             set-project-code!
             set-simultaneous-donors!
@@ -74,6 +82,22 @@
                         #:getter get-google-region
                         #:setter set-google-region-private!)
 
+  (google-cmek-path     #:init-value #f
+                        #:getter get-google-cmek-path
+                        #:setter set-google-cmek-path-private!)
+
+  (google-service-account #:init-value #f
+                        #:getter get-google-service-account
+                        #:setter set-google-service-account-private!)
+
+  (google-archive-bucket #:init-value #f
+                        #:getter get-google-archive-bucket
+                        #:setter set-google-archive-bucket-private!)
+
+  (google-report-bucket #:init-value #f
+                        #:getter get-google-report-bucket
+                        #:setter set-google-report-bucket-private!)
+
   (simultaneous-donors  #:init-value 2
                         #:getter get-simultaneous-donors
                         #:setter set-simultaneous-donors-private!))
@@ -99,8 +123,12 @@
                                simultaneous-donors
                                store-directory
                                access-token
-                               google-region
+                               google-archive-bucket
+                               google-service-account
+                               google-cmek-path
                                google-project
+                               google-region
+                               google-report-bucket
                                pipeline-jar
                                tmpdir
                                cache-directory))

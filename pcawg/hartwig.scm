@@ -101,6 +101,7 @@
              (command (string-append
                        %java " -jar " (pipeline-jar)
                        " -profile development"
+                       " -output_cram false"
                        " -set_id " donor-name
                        " -run_id from-jar"
                        " -preemptible_vms true"

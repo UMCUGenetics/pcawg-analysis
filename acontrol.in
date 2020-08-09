@@ -142,8 +142,8 @@
   (format #t "please specify the --report-bucket.")
   (exit 1))
 
-(unless (assoc-ref %config 'service-account)
-  (format #t "please specify the --service-account.")
+(unless (assoc-ref %config 'google-service-account)
+  (format #t "please specify the --google-service-account.")
   (exit 1))
 
 (unless (project-code)

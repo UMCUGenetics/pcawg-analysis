@@ -103,31 +103,19 @@
       (let* ((logfile (lambda (file)
                         (string-append
                          (donor-directory donor-name) "/" file)))
-             (panel   (panel-file donor-name))
-             (command (string-append
-                       %java " -jar " (pipeline-jar)
-                       " -profile development"
-                       " -output_cram false"
-                       " -set_id " donor-name
-                       " -run_id from-jar"
-                       " -preemptible_vms true"
-                       " -max_concurrent_lanes " (number->string %max-concurrent-lanes)
-                       " -sample_json " panel
-                       " -cloud_sdk " (dirname %gcloud)
-                       " -archive_bucket " (google-archive-bucket)
-                       " -patient_report_bucket " (google-report-bucket)
-                       " -region " (google-region)
-                       " -project " (google-project)
-                       " -cmek " (google-cmek-path)
-                       " -service_account_email " (google-service-account)
-                       " > " (logfile "/pipeline5.log")
-                       " 2> "(logfile "/pipeline5.errors"))))
-        (log-debug "run-pipeline" "Command:  ~a~%" command)
-        (let* ((port   (open-input-pipe command))
-               (status (zero? (status:exit-val (close-pipe port)))))
-          (log-debug "run-pipeline" "Pipeline ~a for ~s."
-                     (if status "completed" "failed")
-                     donor-name)))]
+             (panel   (panel-file donor-name)))
+        (if panel
+            (let ((command (format #f "~a -jar ~a -profile development -output_cram false -set_id ~a  -run_id from-jar -preemptible_vms true -max_concurrent_lanes ~a -sample_json ~a -cloud_sdk ~a -archive_bucket ~a -patient_report_bucket ~a -region ~a -project ~a -cmek ~a -service_account_email ~a > ~a 2> ~a"
+                                   %java (pipeline-jar) donor-name %max-concurrent-lanes panel (dirname %gcloud) (google-archive-bucket) (google-report-bucket) (google-region) (google-project) (google-cmek-path) (google-service-account) (logfile "/pipeline5.log") (logfile "/pipeline5.errors"))))
+
+              (log-debug "run-pipeline" "Command:  ~a" command)
+              (let* ((port   (open-input-pipe command))
+                     (status (zero? (status:exit-val (close-pipe port)))))
+                (log-debug "run-pipeline" "Pipeline ~a for ~s."
+                           (if status "completed" "failed")
+                           donor-name)))
+            (log-debug "run-pipeline" "~a's panel is incomplete, skipping run."
+                       donor-name)))]
      [else
       (log-debug "run-pipeline" "Retrying the pipeline for ~s run in 2 minutes." donor-name)
       (sleep 120)

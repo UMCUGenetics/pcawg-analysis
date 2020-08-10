@@ -34,6 +34,12 @@
   (string-append "gs://run-" (string-downcase donor-full-name) "-umc1"))
 
 (define (make-google-bucket donor-full-name)
+  ;; From the GCP documentation:
+  ;; > There is a per-project rate limit to bucket creation and deletion of
+  ;; > approximately 1 request every 2 seconds.
+  ;;
+  ;; So we need to delay each bucket creation by two seconds to avoid
+  ;; exceeding this rate limit.
   (let ((name (name-google-bucket donor-full-name)))
     (if (zero? (system (string-append
                         %gsutil " mb"
@@ -41,7 +47,7 @@
                         " -l " (google-region)
                         " -c STANDARD "
                         name)))
-        name
+        (begin (sleep 2) name)
         #f)))
 
 (define (panel-file donor-name)

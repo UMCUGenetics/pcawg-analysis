@@ -14,7 +14,8 @@
              (pcawg config)
              (pcawg dcc-portal)
              (pcawg filesystem)
-             (pcawg hartwig))
+             (pcawg hartwig)
+             (srfi srfi-1))
 
 ;; ---------------------------------------------------------------------------
 ;; COMMAND-LINE PARSING
@@ -93,8 +94,8 @@
 (when (assoc-ref %config 'report-bucket)
   (set-google-report-bucket! (assoc-ref %config 'report-bucket)))
 
-(when (assoc-ref %config 'service-account)
-  (set-google-service-account! (assoc-ref %config 'service-account)))
+(when (assoc-ref %config 'google-service-account)
+  (set-google-service-account! (assoc-ref %config 'google-service-account)))
 
 (when (assoc-ref %config 'project-code)
   (set-project-code! (assoc-ref %config 'project-code)))

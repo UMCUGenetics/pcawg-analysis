@@ -172,7 +172,10 @@
          (log-debug "acontrol" "Processing ~a" donor-id)
          (let ((files (files-for-donor donor-id metadata)))
            (n-par-for-each 2 bam->fastq files)))
-       donors)))
+       donors)
+
+      ;; Wait for the pipeline runs to finish.
+      (for-each join-thread (delete (current-thread) (all-threads)))))
   (lambda (key .args)
     (format #t "The Collaboratory does not have any samples for project ~s.~%"
             (project-code))))

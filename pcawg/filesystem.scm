@@ -289,5 +289,10 @@
      [(not (upload-to-the-conglomerates-daughter fastq-dir donor-full-name))
       #f]
      [else
+      ;; The pipeline creates a bucket.  Due to a rate-limit on
+      ;; creating/deleting buckets we must make sure we don't start more than
+      ;; one pipeline run every two seconds.
+      (sleep 3)
+
       (call-with-new-thread (lambda _ (run-pipeline donor)))
       #t])))

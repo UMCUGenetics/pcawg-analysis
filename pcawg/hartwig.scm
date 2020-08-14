@@ -94,12 +94,11 @@
   (let ((reference-bucket (name-google-bucket (string-append donor-name "R")))
         (tumor-bucket     (name-google-bucket (string-append donor-name "T")))
         (lanes            (lanes-per-donor donor-name)))
-    (log-debug "run-pipeline" "Processing ~s lanes for ~s" lanes donor-name)
     (cond
      [(and (bucket-exists? reference-bucket)
            (bucket-exists? tumor-bucket)
-           lanes
-           (may-run-pipeline-run? (google-region) lanes %max-concurrent-lanes))
+           lanes)
+           ;(may-run-pipeline-run? (google-region) lanes %max-concurrent-lanes))
       (let* ((logfile (lambda (file)
                         (string-append
                          (donor-directory donor-name) "/" file)))

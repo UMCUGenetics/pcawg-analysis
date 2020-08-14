@@ -49,6 +49,10 @@
   (log-debug step "Completed for ~s" identifier)
   #t)
 
+(define (step-already-completed step identifier)
+  (log-debug step "Already completed for ~s" identifier)
+  #t)
+
 (define (step-failed step identifier)
   (log-debug step "Failed for ~s" identifier)
   #f)
@@ -112,7 +116,7 @@
          (filename      (filename-by-file-data file-data)))
     (cond
      [(file-exists? (string-append filename ".complete"))
-      (step-completed "download" filename)]
+      (step-already-completed "download" filename)]
      [(not object-id)
       (step-failed "download" file-id)]
      [else
@@ -141,7 +145,7 @@
 
 (define (bam->read-groups bam-file split-completed dest-dir donor-full-name)
   (if (file-exists? split-completed)
-      (step-completed "bam->read-groups" bam-file)
+      (step-already-completed "bam->read-groups" bam-file)
       (begin
         (mkdir-p dest-dir)
         (let* ((cmd (format #f "~a split -@ ~a -u /dev/null -f ~s ~s"
@@ -166,7 +170,7 @@
 
 (define (read-groups->fastq dest-dir fastq-dir donor-full-name)
   (if (file-exists? (string-append fastq-dir "/unmap_complete"))
-      (step-completed "read-groups->fastq" fastq-dir)
+      (step-already-completed "read-groups->fastq" fastq-dir)
       (let ((split-files (scandir dest-dir
                                   (lambda (file)
                                     (string-suffix? ".bam" file)))))
@@ -208,7 +212,7 @@
 
 (define (upload-to-the-conglomerates-daughter fastq-dir donor-full-name)
   (if (file-exists? (string-append fastq-dir "/upload_complete"))
-      (step-completed "upload" fastq-dir)
+      (step-already-completed "upload" fastq-dir)
       (let ((bucket (make-google-bucket donor-full-name)))
         (cond
          [(not bucket) #f]
@@ -292,7 +296,6 @@
       ;; The pipeline creates a bucket.  Due to a rate-limit on
       ;; creating/deleting buckets we must make sure we don't start more than
       ;; one pipeline run every two seconds.
-      (sleep 3)
-
-      (call-with-new-thread (lambda _ (run-pipeline donor)))
+      ;; (sleep 3)
+      (run-pipeline donor)
       #t])))

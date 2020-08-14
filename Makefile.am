@@ -17,6 +17,8 @@ include guile.am
 
 SOURCES =              \
   logger.scm           \
+  ui/panel-file.scm    \
+  ui/preprocess.scm    \
   pcawg/config.scm     \
   pcawg/dcc-portal.scm \
   pcawg/google.scm     \

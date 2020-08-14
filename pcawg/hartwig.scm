@@ -109,13 +109,16 @@
                                    %java (pipeline-jar) donor-name %max-concurrent-lanes panel (dirname %gcloud) (google-archive-bucket) (google-report-bucket) (google-region) (google-project) (google-cmek-path) (google-service-account) (logfile "/pipeline5.log") (logfile "/pipeline5.errors"))))
 
               (log-debug "run-pipeline" "Command:  ~a" command)
-              (let* ((port   (open-input-pipe command))
-                     (status (zero? (status:exit-val (close-pipe port)))))
-                (log-debug "run-pipeline" "Pipeline ~a for ~s."
-                           (if status "completed" "failed")
-                           donor-name)))
-            (log-debug "run-pipeline" "~a's panel is incomplete, skipping run."
-                       donor-name)))]
+              #t)
+              ;; (let* ((port   (open-input-pipe command))
+              ;;        (status (zero? (status:exit-val (close-pipe port)))))
+              ;;   (log-debug "run-pipeline" "Pipeline ~a for ~s."
+              ;;              (if status "completed" "failed")
+              ;;              donor-name))
+            (begin
+              (log-debug "run-pipeline" "~a's panel is incomplete, skipping run."
+                         donor-name)
+              #f)))]
      [else
       (log-debug "run-pipeline" "Retrying the pipeline for ~s run in 2 minutes." donor-name)
       (sleep 120)

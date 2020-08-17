@@ -145,11 +145,17 @@
           (log-debug "acontrol"
                      "Processing ~a donors in parallel."
                      (simultaneous-donors))
+
           (n-par-for-each (simultaneous-donors)
                           (lambda (donor-id)
                             (log-debug "acontrol" "Processing ~a" donor-id)
                             (let ((files (files-for-donor donor-id metadata)))
-                              (n-par-for-each 2 bam->fastq files)))
+                              (if (every (lambda (t) t)
+                                         (n-par-map 2 bam->fastq files))
+                                  (run-pipeline donor-id)
+                                  (begin
+                                    (log-error "Preprocessing files for ~s failed." donor-id)
+                                    #f))))
                           donors)
 
           ;; Wait for the pipeline runs to finish.

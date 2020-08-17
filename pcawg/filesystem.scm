@@ -281,8 +281,7 @@
          (dest-dir        (string-append basedir "/split"))
          (split-completed (string-append dest-dir "/complete"))
          (fastq-dir       (string-append basedir "/fastq"))
-         (donor-full-name (string-append donor
-                                         (if (eq? specimen-type 'TUMOR) "T" "R"))))
+         (donor-full-name (string-append donor (if (eq? specimen-type 'TUMOR) "T" "R"))))
     (cond
      [(not (download-file file-data))
       #f]
@@ -293,9 +292,4 @@
      [(not (upload-to-the-conglomerates-daughter fastq-dir donor-full-name))
       #f]
      [else
-      ;; The pipeline creates a bucket.  Due to a rate-limit on
-      ;; creating/deleting buckets we must make sure we don't start more than
-      ;; one pipeline run every two seconds.
-      ;; (sleep 3)
-      (run-pipeline donor)
       #t])))

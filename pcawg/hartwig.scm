@@ -34,21 +34,20 @@
   (string-append "gs://run-" (string-downcase donor-full-name) "-umc1"))
 
 (define (make-google-bucket donor-full-name)
-  ;; From the GCP documentation:
-  ;; > There is a per-project rate limit to bucket creation and deletion of
-  ;; > approximately 1 request every 2 seconds.
-  ;;
-  ;; So we need to delay each bucket creation by two seconds to avoid
-  ;; exceeding this rate limit.
   (let ((name (name-google-bucket donor-full-name)))
-    (if (zero? (system (string-append
-                        %gsutil " mb"
-                        " -p " (google-project)
-                        " -l " (google-region)
-                        " -c STANDARD "
-                        name)))
-        (begin (sleep 2) name)
-        #f)))
+    (cond
+     [(bucket-exists? name)
+      #t]
+     [(zero? (system (format #f "~a mb -p ~a -l ~a -c STANDARD ~a"
+                             %gsutil (google-project) (google-region) name)))
+      ;; From the GCP documentation:
+      ;; > There is a per-project rate limit to bucket creation and deletion of
+      ;; > approximately 1 request every 2 seconds.
+      ;;
+      ;; So we need to delay each bucket creation by two seconds to avoid
+      ;; exceeding this rate limit.
+      (begin (sleep 2) name)]
+     [else #f])))
 
 (define (panel-file donor-name)
   (let ((filename (string-append (donor-directory donor-name) "/panel.json")))
@@ -93,8 +92,18 @@
 (define (run-pipeline donor-name)
   (let ((reference-bucket (name-google-bucket (string-append donor-name "R")))
         (tumor-bucket     (name-google-bucket (string-append donor-name "T")))
+        (trun-bucket      (name-google-bucket (string-append donor-name "T-from-jar")))
+        (rrun-bucket      (name-google-bucket (string-append donor-name "T-from-jar")))
+        (output-bucket    (format #f "gs://~a/~aT-from-jar" (google-report-bucket) donor-name))
         (lanes            (lanes-per-donor donor-name)))
     (cond
+     [(or (bucket-exists? trun-bucket)
+          (bucket-exists? rrun-bucket))
+      (log-debug "run-pipeline" "Already running pipeline for ~s." donor-name)
+      #t]
+     [(bucket-exists? output-bucket)
+      (log-debug "run-pipeline" "Already completed pipeline for ~s." donor-name)
+      #t]
      [(and (bucket-exists? reference-bucket)
            (bucket-exists? tumor-bucket)
            lanes)
@@ -119,6 +128,5 @@
                          donor-name)
               #f)))]
      [else
-      (log-debug "run-pipeline" "Retrying the pipeline for ~s run in 2 minutes." donor-name)
-      (sleep 120)
-      (run-pipeline donor-name)])))
+      (log-debug "run-pipeline" "Skipping pipeline run for ~s." donor-name)
+      #f])))

@@ -11,6 +11,7 @@
 (use-modules (ice-9 getopt-long)
              (ice-9 threads)
              (logger)
+             (ui postprocess)
              (ui preprocess)
              (ui panel-file)
              (pcawg config)
@@ -34,6 +35,7 @@
    '("This is acontrol."
      "  Subcommands:"
      "    preprocess"
+     "    postprocess"
      "    panel-file"
      ""
      "  Options:"
@@ -56,10 +58,8 @@
   (if (> (length options) 1)
       (let ((subcommand (cadr options)))
         (cond
-         [(string= subcommand "preprocess")
-          (do-preprocess (cdr options))]
-         [(string= subcommand "panel-file")
-          (do-panel-file (cdr options))]
-         [else
-          (process-regular-options options)]))
+         [(string= subcommand "postprocess")  (do-postprocess (cdr options))]
+         [(string= subcommand "preprocess")   (do-preprocess (cdr options))]
+         [(string= subcommand "panel-file")   (do-panel-file (cdr options))]
+         [else (process-regular-options options)]))
       (process-regular-options options)))

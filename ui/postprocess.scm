@@ -40,16 +40,17 @@
 (define (donor->unmapped-reads bucket store-directory donor-id)
 
   (define (bam-uri id)
-    (format #f "~a-from-jar/~a/aligner/~a.bam" bucket id id))
+    (format #f "~a/~a-from-jar/~a/aligner/~a.bam"
+            bucket (string-drop-right id 1) id id))
 
   (define (filter-command prefix flag)
-    (format #f "~a view -b -f ~a > ~a_unmapped_flag-~a.bam" %samtools flag prefix flag))
+    (format #f "~a view -b -f ~a > ~a/~a_unmapped_flag-~a.bam" %samtools flag store-directory prefix flag))
 
   (define (merge-command prefix flags)
-    (format #f "~a merge ~a_unmapped.bam~{ ~a_unmapped_flag-~a.bam~}"
+    (format #f "~a merge ~a/~a_unmapped.bam~{ ~a/~a_unmapped_flag-~a.bam~}"
             %samtools
-            prefix
-            (flatten (map (lambda (flag) `(,prefix ,flag)) flags))))
+            store-directory prefix
+            (flatten (map (lambda (flag) `(,store-directory ,prefix ,flag)) flags))))
 
   (define (extract-command id)
     (let ((done-file (format #f "~a/~a_unmapped.done" store-directory id)))
@@ -106,8 +107,16 @@
 
     (when (assoc-ref config 'help) (show-help))
 
+    (when (assoc-ref config 'debug-log)
+      (set-default-debug-port!
+       (open-file (assoc-ref config 'debug-log) "a")))
+
+    (when (assoc-ref config 'error-log)
+      (set-default-error-port!
+       (open-file (assoc-ref config 'error-log) "a")))
+
     (unless (assoc-ref config 'simultaneous-donors)
-      (cons `(simultaneous-donors . 1) config))
+      (cons `(simultaneous-donors . "1") config))
 
     (unless (assoc-ref config 'store-directory)
       (format #t "Please specify the --store-directory.~%")
@@ -120,7 +129,7 @@
     (log-debug "postprocess" "Started.")
     (log-error "postprocess" "Started.")
     (let ((donors (donors-from-bucket (assoc-ref config 'report-bucket))))
-      (n-par-for-each (assoc-ref config 'simultaneous-donors)
+      (n-par-for-each (string->number (assoc-ref config 'simultaneous-donors))
                       (lambda (id)
                         (donor->unmapped-reads
                          (assoc-ref config 'report-bucket)

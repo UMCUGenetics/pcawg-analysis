@@ -1,4 +1,5 @@
 (define-module (ui postprocess)
+  #:use-module (ice-9 format)
   #:use-module (ice-9 getopt-long)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
@@ -29,6 +30,13 @@
      "  --help                     -h  Show this message."))
   (exit 0))
 
+(define (flatten lst)
+  (cond [(null? lst)
+         '()]
+        [(pair? lst)
+         (append (flatten (car lst)) (flatten (cdr lst)))]
+        [else (list lst)]))
+
 (define (donor->unmapped-reads bucket store-directory donor-id)
 
   (define (bam-uri id)
@@ -36,6 +44,12 @@
 
   (define (filter-command prefix flag)
     (format #f "~a view -b -f ~a > ~a_unmapped_flag-~a.bam" %samtools flag prefix flag))
+
+  (define (merge-command prefix flags)
+    (format #f "~a merge ~a_unmapped.bam~{ ~a_unmapped_flag-~a.bam~}"
+            %samtools
+            prefix
+            (flatten (map (lambda (flag) `(,prefix ,flag)) flags))))
 
   (define (extract-command id)
     (let ((done-file (format #f "~a/~a_unmapped.done" store-directory id)))
@@ -45,13 +59,14 @@
           ;; multiple samtools filters.  Because Guile's ‘system’ command
           ;; uses "sh", we need to wrap the command and send it to
           ;; "bash".
-          (format #f "echo \"~a cat ~a | ~a >(~a) >(~a) >(~a) | ~a\" | ~a && touch ~a"
+          (format #f "echo \"~a cat ~a | ~a >(~a) >(~a) >(~a) | ~a\" | ~a && ~a && touch ~a"
                   %gsutil (bam-uri id) %tee
                   (filter-command id 4)
                   (filter-command id 12)
                   (filter-command id 73)
                   (filter-command id 133)
                   %bash
+                  (merge-command id '(4 12 73 133))
                   done-file))))
 
   (log-debug "donor->unmapped-reads" "Extracting unmapped reads for ~s" donor-id)

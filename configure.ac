@@ -82,6 +82,20 @@ if test "x$JAVA" = "x"; then
    AC_MSG_ERROR([Cannot find java.])
 fi
 
+dnl Test whether the "tee" command is somewhere in path.
+dnl ---------------------------------------------------------------------------
+AC_PATH_PROG([TEE], [tee])
+if test "x$TEE" = "x"; then
+   AC_MSG_ERROR([Cannot find tee.])
+fi
+
+dnl Test whether the "bash" command is somewhere in path.
+dnl ---------------------------------------------------------------------------
+AC_PATH_PROG([BASH], [bash])
+if test "x$BASH" = "x"; then
+   AC_MSG_ERROR([Cannot find bash.])
+fi
+
 AC_CONFIG_FILES([env], [chmod +x env])
 AC_CONFIG_FILES([acontrol], [chmod +x acontrol])
 AC_CONFIG_FILES([Makefile pcawg/tools.scm])

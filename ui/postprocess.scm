@@ -34,12 +34,25 @@
   (define (bam-uri id)
     (format #f "~a-from-jar/~a/aligner/~a.bam" bucket id id))
 
+  (define (filter-command prefix flag)
+    (format #f "~a view -b -f ~a > ~a_unmapped_flag-~a.bam" %samtools flag prefix flag))
+
   (define (extract-command id)
-    (let ((output-file (format #f "~a/~a_unmapped-4.bam" store-directory id)))
-      (if (file-exists? output-file)
-          (format #f "touch ~a.done" output-file)
-          (format #f "~a cat ~a | ~a view -b -f 4 > ~a"
-                  %gsutil (bam-uri id) %samtools output-file))))
+    (let ((done-file (format #f "~a/~a_unmapped.done" store-directory id)))
+      (if (file-exists? done-file)
+          (format #f "exit 0")
+          ;; This Bash-specific construction streams the BAM's contents to
+          ;; multiple samtools filters.  Because Guile's ‘system’ command
+          ;; uses "sh", we need to wrap the command and send it to
+          ;; "bash".
+          (format #f "echo \"~a cat ~a | ~a >(~a) >(~a) >(~a) | ~a\" | ~a && touch ~a"
+                  %gsutil (bam-uri id) %tee
+                  (filter-command id 4)
+                  (filter-command id 12)
+                  (filter-command id 73)
+                  (filter-command id 133)
+                  %bash
+                  done-file))))
 
   (log-debug "donor->unmapped-reads" "Extracting unmapped reads for ~s" donor-id)
   (let* ((out           (donor-directory donor-id))

@@ -23,7 +23,9 @@
             %gsutil
             %gcloud
             %java
-            %threads))
+            %threads
+            %tee
+            %bash))
 
 (define %score-client "@SCORECLIENT@")
 (define %samtools     "@SAMTOOLS@")
@@ -32,4 +34,6 @@
 (define %gsutil       "@GSUTIL@")
 (define %gcloud       "@GCLOUD@")
 (define %java         "@JAVA@")
+(define %tee          "@TEE@")
+(define %bash         "@BASH@")
 (define %threads      (total-processor-count))

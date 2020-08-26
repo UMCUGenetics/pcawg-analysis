@@ -1,11 +1,12 @@
 (define-module (ui remove-donor)
-  #:use-module (ice-9 getopt-long)
   #:use-module (ice-9 ftw)
+  #:use-module (ice-9 getopt-long)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
-  #:use-module (pcawg hartwig)
   #:use-module (pcawg config)
+  #:use-module (pcawg hartwig)
   #:use-module (pcawg tools)
+  #:use-module (srfi srfi-1)
 
   #:export (do-remove-donor))
 

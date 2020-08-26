@@ -76,8 +76,8 @@ errors."
     ;; ------------------------------------------------------------------------
     (let ((tumor     (name-google-bucket (string-append donor-name "T")))
           (reference (name-google-bucket (string-append donor-name "R"))))
-      (system (string-append %gsutil " " tumor))
-      (system (string-append %gsutil " " reference)))))
+      (system (string-append %gsutil " rb -f " tumor))
+      (system (string-append %gsutil " rb -f " reference)))))
 
 (define (do-remove-donor options)
   (let* [(config     (getopt-long options program-options))

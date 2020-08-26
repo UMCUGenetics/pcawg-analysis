@@ -5,6 +5,7 @@
   #:use-module (ice-9 popen)
   #:use-module (pcawg hartwig)
   #:use-module (pcawg config)
+  #:use-module (pcawg tools)
 
   #:export (do-remove-donor))
 
@@ -69,7 +70,14 @@ errors."
           (delete-directory
            (string-append (store-directory) "/donors/" donor-name))
           (for-each delete-directory (delete-duplicates directories string=))
-          (format #t "Data has been removed.~%")))))
+          (format #t "Data has been removed.~%")))
+
+    ;; Remove the buckets associated with the donor.
+    ;; ------------------------------------------------------------------------
+    (let ((tumor     (name-google-bucket (string-append donor-name "T")))
+          (reference (name-google-bucket (string-append donor-name "R"))))
+      (system (string-append %gsutil " " tumor))
+      (system (string-append %gsutil " " reference)))))
 
 (define (do-remove-donor options)
   (let* [(config     (getopt-long options program-options))

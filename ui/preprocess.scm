@@ -84,6 +84,9 @@
     (when (assoc-ref config 'store-directory)
       (set-store-directory! (assoc-ref config 'store-directory)))
 
+    (when (assoc-ref config 'simultaneous-donors)
+      (set-simultaneous-donors! (assoc-ref config 'simultaneous-donors)))
+
     (when (assoc-ref config 'debug-log)
       (set-default-debug-port!
        (open-file (assoc-ref config 'debug-log) "a")))

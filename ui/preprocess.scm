@@ -102,7 +102,7 @@
     ;;
     ;; The Score client reads the environment variables “STORAGE_PROFILE” and
     ;; “ACCESSTOKEN”, so we set those in the program's runtime environment.
-                                        ;
+    ;
 
     (setenv "STORAGE_PROFILE" (storage-profile))
     (setenv "ACCESSTOKEN"     (access-token))
@@ -111,7 +111,7 @@
     ;; PROCESSING
     ;; ---------------------------------------------------------------------------
     ;;
-                                        ;
+    ;
 
     (unless (assoc-ref config 'google-cmek-path)
       (format #t "Please specify the --google-cmek-path.~%")
@@ -158,7 +158,7 @@
                                          (n-par-map 2 bam->fastq files))
                                   (run-pipeline donor-id)
                                   (begin
-                                    (log-error "Preprocessing files for ~s failed." donor-id)
+                                    (log-error "acontrol" "Preprocessing files for ~s failed." donor-id)
                                     #f))))
                           donors)
 

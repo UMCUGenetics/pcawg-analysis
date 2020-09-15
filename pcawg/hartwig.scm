@@ -26,7 +26,9 @@
   #:export (make-google-bucket
             name-google-bucket
             panel-file
-            run-pipeline))
+            run-pipeline
+            donor-is-processed?
+            remove-fastq-buckets-for-donor))
 
 (define %max-concurrent-lanes 24)
 
@@ -130,3 +132,18 @@
      [else
       (log-debug "run-pipeline" "Skipping pipeline run for ~s." donor-name)
       #f])))
+
+(define (donor-is-processed? donor-name)
+  (let ((port (open-input-pipe
+               (format #f "~a ls gs://patient-report-bucket-umc/~a-from-jar/linx/run.log > /dev/null 2> /dev/null"
+                       %gsutil donor-name))))
+    (zero? (status:exit-val (close-pipe port)))))
+
+(define (remove-fastq-buckets-for-donor donor-name)
+  (if (donor-is-processed? donor-name)
+      (let ((tumor     (string-append donor-name "t"))
+            (reference (string-append donor-name "r")))
+        (for-each system
+                  (list (format #f "~a rm -rf ~a" %gsutil (name-google-bucket tumor))
+                        (format #f "~a rm -rf ~a" %gsutil (name-google-bucket reference)))))
+      #f))

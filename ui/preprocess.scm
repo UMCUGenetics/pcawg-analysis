@@ -144,10 +144,11 @@
       (lambda _
         (let* ((metadata   (metadata-for-project (project-code)))
                (all-donors (donors-in-project metadata))
-               (donors     (delete (map (lambda (donor-id)
-                                          (if (donor-is-processed? donor-id)
-                                              #f
-                                              donor-id))))))
+               (donors     (delete #f (map (lambda (donor-id)
+                                             (if (donor-is-processed? donor-id)
+                                                 #f
+                                                 donor-id))
+                                           all-donors))))
           (format #t "There are ~a donors of ~a left to process in ~s"
                   (length donors) (length all-donors) project-code)
 

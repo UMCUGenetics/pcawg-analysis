@@ -3,10 +3,12 @@
   #:use-module (ice-9 getopt-long)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
+  #:use-module (ice-9 receive)
   #:use-module (ice-9 threads)
   #:use-module (logger)
   #:use-module (pcawg filesystem)
   #:use-module (pcawg tools)
+  #:use-module (pcawg unmapped-reads)
   #:use-module (srfi srfi-1)
 
   #:export (do-postprocess))
@@ -30,53 +32,26 @@
      "  --help                     -h  Show this message."))
   (exit 0))
 
-(define (flatten lst)
-  (cond [(null? lst)
-         '()]
-        [(pair? lst)
-         (append (flatten (car lst)) (flatten (cdr lst)))]
-        [else (list lst)]))
-
 (define (donor->unmapped-reads bucket store-directory donor-id)
-
-  (define (bam-uri id)
-    (format #f "~a/~a-from-jar/~a/aligner/~a.bam"
-            bucket (string-drop-right id 1) id id))
-
-  (define (filter-command prefix flag)
-    (format #f "~a view -b -f ~a > ~a/~a_unmapped_flag-~a.bam" %samtools flag store-directory prefix flag))
-
-  (define (merge-command prefix flags)
-    (format #f "~a merge ~a/~a_unmapped.bam~{ ~a/~a_unmapped_flag-~a.bam~}"
-            %samtools
-            store-directory prefix
-            (flatten (map (lambda (flag) `(,store-directory ,prefix ,flag)) flags))))
-
-  (define (extract-command id)
-    (let ((done-file (format #f "~a/~a_unmapped.done" store-directory id)))
-      (if (file-exists? done-file)
-          (format #f "exit 0")
-          ;; This Bash-specific construction streams the BAM's contents to
-          ;; multiple samtools filters.  Because Guile's ‘system’ command
-          ;; uses "sh", we need to wrap the command and send it to
-          ;; "bash".
-          (format #f "echo \"~a cat ~a | ~a >(~a) >(~a) >(~a) | ~a\" | ~a && ~a && touch ~a"
-                  %gsutil (bam-uri id) %tee
-                  (filter-command id 4)
-                  (filter-command id 12)
-                  (filter-command id 73)
-                  (filter-command id 133)
-                  %bash
-                  (merge-command id '(4 12 73 133))
-                  done-file))))
-
-  (log-debug "donor->unmapped-reads" "Extracting unmapped reads for ~s" donor-id)
-  (let* ((out           (donor-directory donor-id))
-         (tumor-id      (string-append donor-id "T"))
-         (reference-id  (string-append donor-id "R"))
-         (tumor-cmd     (extract-command tumor-id))
-         (reference-cmd (extract-command reference-id)))
-    (every zero? (n-par-map 2 system (list tumor-cmd reference-cmd)))))
+  (let ((done-file (format #f "~a/~a_unmapped.done" store-directory donor-id)))
+    (if (file-exists? done-file)
+        #t
+        (let* ((input-file  (format #f "~a/~a-from-jar/~aT/aligner/~aT.bam"
+                                    bucket donor-id donor-id donor-id))
+               (output-file (format #f "~a/~aT_unmapped.bam"
+                                    store-directory donor-id))
+               (input-port  (open-input-pipe
+                             (format #f "~a cat ~a" %gsutil input-file))))
+          (setvbuf input-port 'block (expt 2 16))
+          (receive (success? message)
+              (with-input-from-port input-port
+                (lambda _
+                  (extract-unmapped-reads "-" output-file "bam" 20 #t)))
+            (if (not success?)
+                (begin
+                  (format #t "Error: ~a" message)
+                  #f)
+                #t))))))
 
 (define (donors-from-bucket bucket-uri)
 

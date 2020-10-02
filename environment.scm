@@ -83,11 +83,13 @@
    (native-inputs
     `(("autoconf" ,autoconf)
       ("automake" ,automake)
+      ("libtool" ,libtool)
       ("pkg-config" ,pkg-config)))
    (inputs
     `(("guile" ,guile-3.0-latest)
       ("guile-json" ,guile-json-4)
       ("gnutls" ,gnutls)
+      ("htslib" ,htslib)
       ("nss-certs" ,nss-certs)
       ("samtools" ,samtools)
       ("sambamba" ,sambamba)

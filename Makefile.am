@@ -13,7 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-include guile.am
+AUTOMAKE_OPTIONS        = subdir-objects
+SUBDIRS                 = extensions
+
+include $(top_srcdir)/build-aux/guile.am
 
 SOURCES =              \
   logger.scm           \

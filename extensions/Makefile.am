@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS               = subdir-objects
 
-extensiondir = $(EXTDIR)
+extensiondir                   = $(EXTDIR)
 extension_LTLIBRARIES          = libunmapped_filter.la
 
 libunmapped_filter_la_CFLAGS   = $(guile_CFLAGS) $(htslib_CFLAGS)

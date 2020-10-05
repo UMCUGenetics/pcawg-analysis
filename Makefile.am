@@ -18,20 +18,25 @@ SUBDIRS                 = extensions
 
 include $(top_srcdir)/build-aux/guile.am
 
-SOURCES =              \
-  logger.scm           \
-  ui/panel-file.scm    \
-  ui/remove-donor.scm  \
-  ui/postprocess.scm   \
-  ui/preprocess.scm    \
-  pcawg/config.scm     \
-  pcawg/dcc-portal.scm \
-  pcawg/google.scm     \
-  pcawg/hartwig.scm    \
-  pcawg/filesystem.scm \
+SOURCES =                  \
+  logger.scm               \
+  ui/panel-file.scm        \
+  ui/remove-donor.scm      \
+  ui/postprocess.scm       \
+  ui/preprocess.scm        \
+  pcawg/config.scm         \
+  pcawg/dcc-portal.scm     \
+  pcawg/google.scm         \
+  pcawg/unmapped-reads.scm \
+  pcawg/hartwig.scm        \
+  pcawg/filesystem.scm     \
   pcawg/tools.scm
 
-EXTRA_DIST     += pcawg/tools.scm.in acontrol.in env.in
+EXTRA_DIST     += pcawg/tools.scm.in          \
+                  pcawg/unmapped-reads.scm.in \
+                  acontrol.in                 \
+                  env.in
+
 bin_SCRIPTS     = acontrol
 
 # Build docker image with Guix

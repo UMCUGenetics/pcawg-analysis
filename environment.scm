@@ -89,7 +89,7 @@
     `(("guile" ,guile-3.0-latest)
       ("guile-json" ,guile-json-4)
       ("gnutls" ,gnutls)
-      ("htslib" ,htslib)
+      ("htslib" ,htslib-with-gcs-support)
       ("nss-certs" ,nss-certs)
       ("samtools" ,samtools)
       ("sambamba" ,sambamba)

@@ -19,4 +19,9 @@
 ;; Disapointed to not see the source code for the functions in this module?
 ;; Check out ‘extensions/unmapped_filter.c’.
 
-(load-extension "@EXTDIR@/libunmapped_filter" "init_unmapped_filter")
+(catch #t
+  (lambda _
+    (load-extension "@EXTDIR@/libunmapped_filter" "init_unmapped_filter"))
+  (lambda (key . args)
+    (format (current-error-port) "Error: Could not load libunmapped_filter.~%")
+    #f))

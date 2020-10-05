@@ -46,9 +46,7 @@ else
    AC_MSG_ERROR([Guile 3.0, 2.2, or 2.0 required.])
 fi
 
-dnl This macro is used to resolve the absolute path to @datarootdir@ so that
-dnl the absolute path can be used in the configuration file for the web
-dnl interface.
+dnl This macro is used to resolve the absolute path to @datarootdir@.
 dnl ---------------------------------------------------------------------------
 AC_DEFUN([AC_DEFINE_DIR], [
   prefix_NONE=
@@ -70,7 +68,6 @@ dnl ---------------------------------------------------------------------------
 AC_DEFINE_DIR([MODDIR], [moddir], [Path to installed Guile modules.])
 AC_DEFINE_DIR([GODIR], [godir], [Path to installed Guile objects.])
 AC_DEFINE_DIR([EXTDIR], [extdir], [Path to installed Guile extensions.])
-
 
 dnl Test whether the "guile" command is somewhere in path.
 dnl ---------------------------------------------------------------------------
@@ -143,7 +140,11 @@ fi
 
 AC_CONFIG_FILES([env], [chmod +x env])
 AC_CONFIG_FILES([acontrol], [chmod +x acontrol])
-AC_CONFIG_FILES([Makefile pcawg/tools.scm extensions/Makefile])
+AC_CONFIG_FILES([
+  Makefile
+  extensions/Makefile
+  pcawg/tools.scm
+  pcawg/unmapped-reads.scm])
 
 PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES([htslib], [htslib])

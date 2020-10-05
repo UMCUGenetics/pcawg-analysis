@@ -36,22 +36,25 @@
   (let ((done-file (format #f "~a/~a_unmapped.done" store-directory donor-id)))
     (if (file-exists? done-file)
         #t
-        (let* ((input-file  (format #f "~a/~a-from-jar/~aT/aligner/~aT.bam"
-                                    bucket donor-id donor-id donor-id))
-               (output-file (format #f "~a/~aT_unmapped.bam"
-                                    store-directory donor-id))
-               (input-port  (open-input-pipe
-                             (format #f "~a cat ~a" %gsutil input-file))))
-          (setvbuf input-port 'block (expt 2 16))
-          (receive (success? message)
-              (with-input-from-port input-port
-                (lambda _
-                  (extract-unmapped-reads "-" output-file "bam" 20 #t)))
-            (if (not success?)
-                (begin
-                  (format #t "Error: ~a" message)
-                  #f)
-                #t))))))
+        (let ((input-file  (format #f "~a/~a-from-jar/~aT/aligner/~aT.bam"
+                                   bucket donor-id donor-id donor-id))
+              (output-file (format #f "~a/~aT_unmapped.bam"
+                                   store-directory donor-id))
+              (done-file   (format #f "~a/~aT_unmapped.done"
+                                   store-directory donor-id)))
+          (log-debug "donor->unmapped-reads" "Reading file: ~s" input-file)
+          (if (file-exists? done-file)
+              #t
+              (receive (success? message)
+                  (extract-unmapped-reads input-file output-file "bam" 20 #t)
+                (if (not success?)
+                    (begin
+                      (log-error "donor->unmapped-reads" "Error: ~s" message)
+                      #f)
+                    (call-with-output-file done-file
+                      (lambda (port)
+                        (format port "")
+                        #t)))))))))
 
 (define (donors-from-bucket bucket-uri)
 

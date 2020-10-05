@@ -160,5 +160,5 @@ void
 init_unmapped_filter ()
 {
   hts_verbose = 0;
-  scm_c_define_gsubr ("extract-unmapped-reads", 4, 0, 0, extract_unmapped_reads);
+  scm_c_define_gsubr ("extract-unmapped-reads", 5, 0, 0, extract_unmapped_reads);
 }

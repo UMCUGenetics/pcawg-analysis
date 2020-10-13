@@ -21,6 +21,7 @@
     (google-project         (single-char #\g) (value #t))
     (google-region          (single-char #\r) (value #t))
     (pipeline-jar           (single-char #\j) (value #t))
+    (donor-id               (single-char #\D) (value #t))
     (project-code           (single-char #\p) (value #t))
     (report-bucket          (single-char #\B) (value #t))
     (simultaneous-donors    (single-char #\t) (value #t))
@@ -40,12 +41,23 @@
      "  --google-region=ARG        -r  The storage region to use."
      "  --google-service-account=A -S  The service account to use."
      "  --pipeline-jar=ARG         -j  Location of the JAR file for pipeline5."
+     "  --donor-id=ARG             -D  Which PCAWG donor to process."
      "  --project-code=ARG         -p  Which PCAWG project to process."
      "  --report-bucket=ARG        -B  The patient report bucket to use."
      "  --simultaneous-donors=ARG  -t  Number of donors to process in parallel."
      "  --store-directory=ARG      -s  Where to store the data."
      "  --help                     -h  Show this message."))
   (exit 0))
+
+(define (process-donor donor-id metadata)
+  (log-debug "acontrol" "Processing ~a" donor-id)
+  (let ((files (files-for-donor donor-id metadata)))
+    (if (every (lambda (t) t)
+               (n-par-map 2 bam->fastq files))
+        (run-pipeline donor-id)
+        (begin
+          (log-error "acontrol" "Preprocessing files for ~s failed." donor-id)
+          #f))))
 
 (define (do-preprocess options)
   (let ((config (getopt-long options program-options)))
@@ -74,6 +86,9 @@
 
     (when (assoc-ref config 'google-service-account)
       (set-google-service-account! (assoc-ref config 'google-service-account)))
+
+    (when (assoc-ref config 'donor-id)
+      (set-donor-id! (assoc-ref config 'donor-id)))
 
     (when (assoc-ref config 'project-code)
       (set-project-code! (assoc-ref config 'project-code)))
@@ -129,8 +144,8 @@
       (format #t "Please specify the --google-service-account.~%")
       (exit 1))
 
-    (unless (project-code)
-      (format #t "Please specify which project to process.~%")
+    (unless (or (project-code) (donor-id))
+      (format #t "Please specify which project or donor to process.~%")
       (exit 1))
 
     (unless (pipeline-jar)
@@ -142,35 +157,42 @@
 
     (catch 'json-invalid
       (lambda _
-        (let* ((metadata   (metadata-for-project (project-code)))
-               (all-donors (donors-in-project metadata))
-               (donors     (delete #f (map (lambda (donor-id)
-                                             (if (donor-is-processed? donor-id)
-                                                 #f
-                                                 donor-id))
-                                           all-donors))))
-          (format #t "There are ~a donors of ~a left to process in ~s"
-                  (length donors) (length all-donors) project-code)
+        (cond
+         ((project-code)
+          (let* ((metadata   (metadata-for-project (project-code)))
+                 (all-donors (donors-in-project metadata))
+                 (donors     (delete #f (map (lambda (donor-id)
+                                               (if (donor-is-processed? donor-id)
+                                                   #f
+                                                   donor-id))
+                                             all-donors))))
+            (format #t "There are ~a donors of ~a left to process in ~s"
+                    (length donors) (length all-donors) project-code)
 
-          ;; Do Pre-processing for donors.
-          (log-debug "acontrol"
-                     "Processing ~a donors in parallel."
-                     (simultaneous-donors))
+            ;; Do Pre-processing for donors.
+            (log-debug "acontrol"
+                       "Processing ~a donors in parallel."
+                       (simultaneous-donors))
 
-          (n-par-for-each (simultaneous-donors)
-                          (lambda (donor-id)
-                            (log-debug "acontrol" "Processing ~a" donor-id)
-                            (let ((files (files-for-donor donor-id metadata)))
-                              (if (every (lambda (t) t)
-                                         (n-par-map 2 bam->fastq files))
-                                  (run-pipeline donor-id)
-                                  (begin
-                                    (log-error "acontrol" "Preprocessing files for ~s failed." donor-id)
-                                    #f))))
-                          donors)
+            (n-par-for-each (simultaneous-donors)
+                            (lambda (donor-id)
+                              (process-donor donor-id metadata))
+                            donors)
 
-          ;; Wait for the pipeline runs to finish.
-          (for-each join-thread (delete (current-thread) (all-threads)))))
+            ;; Wait for the pipeline runs to finish.
+            (for-each join-thread (delete (current-thread) (all-threads)))))
+         ((donor-id)
+          (let ((metadata (metadata-for-donor (donor-id))))
+            (process-donor (donor-id) metadata)))
+         (else
+          (log-debug "acontrol" "Nothing to do."))))
       (lambda (key . args)
-        (format #t "The Collaboratory does not have any samples for project ~s.~%"
-                (project-code))))))
+        (cond
+         ((project-code)
+          (format #t "The Collaboratory does not have any samples for project ~s.~%"
+                  (project-code)))
+         ((donor-id)
+          (format #t "The Collaboratory does not have any files for donor ~s.~%"
+                  (donor-id)))
+         (else
+          (format #t "Error: ~a: ~s~%" key args)))))))

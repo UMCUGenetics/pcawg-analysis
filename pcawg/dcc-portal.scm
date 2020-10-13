@@ -26,6 +26,7 @@
   #:use-module (logger)
 
   #:export (metadata-for-project
+            metadata-for-donor
             manifest-for-file-id
             donors-in-project
             files-for-donor
@@ -85,6 +86,35 @@
     (lambda (key . args)
       (log-error "restructure-metadata" "Unexpected metadata structure.")
       #f)))
+
+(define (metadata-for-donor donor-id)
+  (let ((cache-filename (format #f "~a/~a.json" (cache-directory) donor-id)))
+    (if (and (cache-directory)
+             (file-exists? cache-filename))
+        (restructure-metadata (call-with-input-file cache-filename json->scm))
+        (call-with-values
+            (lambda ()
+              (http-get (string-append
+                         %base-uri "/repository/files/export?type=json&filters="
+                         (uri-encode
+                          (scm->json-string
+                           `((file (donorId              (is . #(,donor-id)))
+                                   (repoName             (is . #("Collaboratory - Toronto")))
+                                   (experimentalStrategy (is . #("WGS")))
+                                   (study                (is . #("PCAWG")))
+                                   (fileFormat           (is . #("BAM"))))))))
+                        #:streaming? #t
+                        #:headers '((accept . ((application/json))))))
+          (lambda (header port)
+            (if (eq? (response-code header) 200)
+                (begin
+                  (let ((data (json->scm port)))
+                    (restructure-metadata data)))
+                (begin
+                  (log-error "metadata-for-donor"
+                             "Response code was ~a"
+                             (response-code header))
+                  #f)))))))
 
 (define (metadata-for-project project-code)
   (let ((cache-filename (format #f "~a/~a.json" (cache-directory) project-code)))

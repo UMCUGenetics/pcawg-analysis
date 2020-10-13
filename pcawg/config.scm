@@ -16,6 +16,7 @@
 (define-module (pcawg config)
   #:use-module (oop goops)
   #:export (access-token
+            donor-id
             cache-directory
             google-archive-bucket
             google-cmek-path
@@ -27,6 +28,7 @@
             project-code
             set-access-token!
             set-cache-directory!
+            set-donor-id!
             set-google-archive-bucket!
             set-google-cmek-path!
             set-google-project!
@@ -50,6 +52,10 @@
   (project-code         #:init-value #f
                         #:getter get-project-code
                         #:setter set-project-code-private!)
+
+  (donor-id             #:init-value #f
+                        #:getter get-donor-id
+                        #:setter set-donor-id-private!)
 
   (store-directory      #:init-value (string-append (getcwd) "/store")
                         #:getter get-store-directory
@@ -119,7 +125,8 @@
   (make-setter symbol))
 
 (make-getter 'storage-profile)
-(for-each make-getter/setter '(project-code
+(for-each make-getter/setter '(donor-id
+                               project-code
                                simultaneous-donors
                                store-directory
                                access-token

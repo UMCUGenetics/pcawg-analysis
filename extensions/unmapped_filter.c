@@ -27,9 +27,12 @@ SCM
 print_bam_file_error (const char *file_name)
 {
   /* Now this looks quite Lispy, eh? */
+  char error_msg[255];
+  snprintf (error_msg, 255, "Cannot open '%s'.", file_name);
+
   return (scm_values
           (scm_list_2
-           (SCM_BOOL_F, scm_from_latin1_string ("Cannot open file."))));
+           (SCM_BOOL_F, scm_from_latin1_string (error_msg))));
 }
 
 SCM

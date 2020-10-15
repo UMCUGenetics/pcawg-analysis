@@ -51,10 +51,11 @@
                     (begin
                       (log-error "donor->unmapped-reads" "Error: ~s" message)
                       #f)
-                    (call-with-output-file done-file
-                      (lambda (port)
-                        (format port "")
-                        #t)))))))))
+                    (begin
+                      (call-with-output-file done-file
+                        (lambda (port) (format port "")))
+                      (log-debug "donor->unmapped-reads" "Finished: ~s" donor-id)
+                      #t))))))))
 
 (define (donors-from-bucket bucket-uri)
 

@@ -167,7 +167,7 @@
                                                    donor-id))
                                              all-donors))))
             (format #t "There are ~a donors of ~a left to process in ~s"
-                    (length donors) (length all-donors) project-code)
+                    (length donors) (length all-donors) (project-code))
 
             ;; Do Pre-processing for donors.
             (log-debug "acontrol"

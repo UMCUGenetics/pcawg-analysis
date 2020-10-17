@@ -46,11 +46,11 @@ docker: dist
              --format=docker \
              -S /bin=bin -S /lib=lib -S /share=share -S /etc=etc -S /var=var \
              glibc-utf8-locales tzdata coreutils bash grep gawk net-base strace \
-             python@2 google-cloud-sdk hmf-google-pipeline
+             python google-cloud-sdk hmf-google-pipeline
 
 pack: dist
 	guix pack -C gzip -e '(load "environment.scm")' \
              --with-source=pcawg-analysis-$(VERSION).tar.gz \
              -S /bin=bin -S /share=share -S /lib=lib \
              glibc-utf8-locales tzdata coreutils bash grep gawk net-base strace \
-             python@2 google-cloud-sdk hmf-google-pipeline guile emacs-geiser
+             python google-cloud-sdk hmf-google-pipeline guile emacs-geiser

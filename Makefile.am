@@ -22,8 +22,10 @@ SOURCES =                  \
   logger.scm               \
   ui/panel-file.scm        \
   ui/remove-donor.scm      \
+  ui/extract-region.scm    \
   ui/postprocess.scm       \
   ui/preprocess.scm        \
+  pcawg/bam-regions.scm    \
   pcawg/config.scm         \
   pcawg/dcc-portal.scm     \
   pcawg/google.scm         \

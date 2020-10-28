@@ -36,6 +36,7 @@
   (for-each (lambda (line) (display line) (newline))
    '("This is acontrol."
      "  Subcommands:"
+     "    extract-region"
      "    preprocess"
      "    postprocess"
      "    panel-file"

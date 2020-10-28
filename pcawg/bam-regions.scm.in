@@ -21,7 +21,7 @@
 
 (catch #t
   (lambda _
-    (load-extension "@EXTDIR@/libunmapped_filter" "init_region_filter"))
+    (load-extension "@EXTDIR@/libregion_filter" "init_region_filter"))
   (lambda (key . args)
     (format (current-error-port) "Error: Could not load libregion_filter.~%")
     #f))

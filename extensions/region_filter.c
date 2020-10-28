@@ -115,7 +115,7 @@ extract_reads_for_region (SCM input_scm,
 
   hts_itr_t *iterator;
   iterator = sam_itr_querys (bam_index, bam_header, region);
-  if (iterator == 0)
+  if (iterator != 0)
     {
       bam1_t *alignment = bam_init1 ();
       int state = 0;
@@ -133,6 +133,12 @@ extract_reads_for_region (SCM input_scm,
 
       bam_destroy1 (alignment);
     }
+  else
+    return
+      (scm_values
+       (scm_list_2
+        (SCM_BOOL_F, scm_from_latin1_string
+         ("Cannot find region."))));
 
   sam_itr_destroy (iterator);
 

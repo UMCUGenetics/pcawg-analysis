@@ -39,7 +39,7 @@
   (define (extract-region suffix)
     (let* ((full-id     (string-append donor-id suffix))
            (input-file  (format #f "~a/~a-from-jar/~a/aligner/~a.bam"
-                                bucket full-id full-id full-id))
+                                bucket donor-id full-id full-id))
            (output-file (format #f "~a/~a_~a.bam"
                                 store-directory full-id region))
            (done-file   (format #f "~a/~a_~a.done"

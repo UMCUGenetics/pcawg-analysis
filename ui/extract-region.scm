@@ -35,29 +35,32 @@
   (exit 0))
 
 (define (donor->extract-region bucket store-directory donor-id region)
-  (let ((done-file (format #f "~a/~a_~a.done" store-directory donor-id region)))
-    (if (file-exists? done-file)
-        #t
-        (let ((input-file  (format #f "~a/~a-from-jar/~aT/aligner/~aT.bam"
-                                   bucket donor-id donor-id donor-id))
-              (output-file (format #f "~a/~aT_~a.bam"
-                                   store-directory donor-id region))
-              (done-file   (format #f "~a/~aT_~a.done"
-                                   store-directory donor-id region)))
-          (log-debug "donor->extract-region" "Reading file: ~s" input-file)
-          (if (file-exists? done-file)
-              #t
-              (receive (success? message)
-                (extract-reads-for-region input-file output-file "bam" region)
-                (if (not success?)
-                    (begin
-                      (log-error "donor->extract-region" "Error: ~s" message)
-                      #f)
-                    (begin
-                      (call-with-output-file done-file
-                        (lambda (port) (format port "")))
-                      (log-debug "donor->extract-region" "Finished: ~s" donor-id)
-                      #t))))))))
+
+  (define (extract-region suffix)
+    (let* ((full-id     (string-append donor-id suffix))
+           (input-file  (format #f "~a/~a-from-jar/~a/aligner/~a.bam"
+                                bucket full-id full-id full-id))
+           (output-file (format #f "~a/~a_~a.bam"
+                                store-directory full-id region))
+           (done-file   (format #f "~a/~a_~a.done"
+                                store-directory full-id region)))
+      (log-debug "donor->extract-region" "Reading file: ~s" input-file)
+      (if (file-exists? done-file)
+          #t
+          (receive (success? message)
+              (extract-reads-for-region input-file output-file "bam" region)
+            (if (not success?)
+                (begin
+                  (log-error "donor->extract-region" "Error: ~s" message)
+                  #f)
+                (begin
+                  (call-with-output-file done-file
+                    (lambda (port) (format port "")))
+                  (log-debug "donor->extract-region" "Finished: ~s" donor-id)
+                  #t))))))
+
+  (extract-region "T")
+  (extract-region "R"))
 
 (define (donors-from-bucket bucket-uri)
 

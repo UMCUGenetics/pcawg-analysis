@@ -115,7 +115,7 @@
                          (donor-directory donor-name) "/" file)))
              (panel   (panel-file donor-name)))
         (if panel
-            (let ((command (format #f "~a -Xmx64m -jar ~a -profile development -output_cram false -set_id ~a  -run_id from-jar -preemptible_vms true -max_concurrent_lanes ~a -sample_json ~a -cloud_sdk ~a -archive_bucket ~a -patient_report_bucket ~a -region ~a -project ~a -cmek ~a -poll_interval 600 -service_account_email ~a > ~a 2> ~a"
+            (let ((command (format #f "~a -Xmx64m -jar ~a -profile development -output_cram false -set_id ~a  -run_id from-jar -preemptible_vms true -max_concurrent_lanes ~a -sample_json ~a -cloud_sdk ~a -archive_bucket ~a -patient_report_bucket ~a -region ~a -project ~a -cmek ~a -poll_interval 30 -service_account_email ~a > ~a 2> ~a"
                                    %java (pipeline-jar) donor-name %max-concurrent-lanes panel (dirname %gcloud) (google-archive-bucket) (google-report-bucket) (google-region) (google-project) (google-cmek-path) (google-service-account) (logfile "/pipeline5.log") (logfile "/pipeline5.errors"))))
 
               (log-debug "run-pipeline" "Command:  ~a" command)

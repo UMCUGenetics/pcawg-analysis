@@ -151,9 +151,9 @@
 (define (files-for-donor donor-id metadata)
   (delete #f (map (lambda (item)
                     (if (and (string= (assoc-ref item 'donor-id) donor-id)
-                             ;; A minimum filesize of 10G excludes the “mini”
+                             ;; A minimum filesize of 40G excludes the “mini”
                              ;; BAM files.
-                             (> (assoc-ref item 'file-size) 10000000000))
+                             (> (assoc-ref item 'file-size) 40000000000))
                         item
                         #f))
                   metadata)))

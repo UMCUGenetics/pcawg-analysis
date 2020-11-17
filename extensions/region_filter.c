@@ -113,6 +113,8 @@ extract_reads_for_region (SCM input_scm,
   /* Read -> filter -> write the SAM/BAM/CRAM reads.
    * ----------------------------------------------------------------------- */
 
+  SCM output = NULL;
+
   hts_itr_t *iterator;
   iterator = sam_itr_querys (bam_index, bam_header, region);
   if (iterator != 0)
@@ -124,21 +126,23 @@ extract_reads_for_region (SCM input_scm,
                                     alignment)) >= 0)
         {
           if (sam_write1 (bam_output_stream, bam_header, alignment) <= 0)
-            return
-              (scm_values
-               (scm_list_2
-                (SCM_BOOL_F, scm_from_latin1_string
-                 ("An error occurred while processing an alignment record."))));
+            {
+              output = scm_values
+                (scm_list_2
+                 (SCM_BOOL_F, scm_from_latin1_string
+                  ("An error occurred while processing an alignment record.")));
+
+              break;
+            }
         }
 
       bam_destroy1 (alignment);
     }
   else
-    return
-      (scm_values
-       (scm_list_2
-        (SCM_BOOL_F, scm_from_latin1_string
-         ("Cannot find region."))));
+    output = scm_values
+              (scm_list_2
+               (SCM_BOOL_F, scm_from_latin1_string
+                ("Cannot find region.")));
 
   sam_itr_destroy (iterator);
 
@@ -151,9 +155,12 @@ extract_reads_for_region (SCM input_scm,
   hts_close (bam_input_stream);
   hts_close (bam_output_stream);
 
-  return (scm_values
-          (scm_list_2
-           (SCM_BOOL_T, SCM_UNDEFINED)));
+  if (output == NULL)
+    output = scm_values
+              (scm_list_2
+               (SCM_BOOL_T, SCM_UNDEFINED));
+
+  return output;
 }
 
 void

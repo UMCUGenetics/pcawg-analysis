@@ -32,30 +32,31 @@
      "  --help                     -h  Show this message."))
   (exit 0))
 
-(define (donor->unmapped-reads bucket store-directory donor-id)
-  (let ((done-file (format #f "~a/~a_unmapped.done" store-directory donor-id)))
-    (if (file-exists? done-file)
-        #t
-        (let ((input-file  (format #f "~a/~a-from-jar/~aT/aligner/~aT.bam"
-                                   bucket donor-id donor-id donor-id))
-              (output-file (format #f "~a/~aT_unmapped.bam"
-                                   store-directory donor-id))
-              (done-file   (format #f "~a/~aT_unmapped.done"
-                                   store-directory donor-id)))
-          (log-debug "donor->unmapped-reads" "Reading file: ~s" input-file)
-          (if (file-exists? done-file)
-              #t
-              (receive (success? message)
-                  (extract-unmapped-reads input-file output-file "bam" 20 #t)
-                (if (not success?)
-                    (begin
-                      (log-error "donor->unmapped-reads" "Error: ~s" message)
-                      #f)
-                    (begin
-                      (call-with-output-file done-file
-                        (lambda (port) (format port "")))
-                      (log-debug "donor->unmapped-reads" "Finished: ~s" donor-id)
-                      #t))))))))
+(define (donor->unmapped-reads bucket storedir donor-id)
+
+  (define (extract-unmapped suffix)
+    (let* ((full-id     (string-append donor-id suffix))
+           (input-file  (format #f "~a/~a-from-jar/~a/aligner/~a.bam"
+                                bucket donor-id full-id full-id))
+           (output-file (format #f "~a/~a_unmapped.bam" storedir full-id))
+           (done-file   (format #f "~a/~a_unmapped.done" storedir full-id)))
+      (log-debug "donor->unmapped-reads" "Reading file: ~s" input-file)
+      (if (file-exists? done-file)
+          #t
+          (receive (success? message)
+              (extract-unmapped-reads input-file output-file "bam" 20 #t)
+            (if (not success?)
+                (begin
+                  (log-error "donor->unmapped-reads" "Error: ~s" message)
+                  #f)
+                (begin
+                  (call-with-output-file done-file
+                    (lambda (port) (format port "")))
+                  (log-debug "donor->unmapped-reads" "Finished: ~s" donor-id)
+                  #t))))))
+
+  (extract-unmapped "T")
+  (extract-unmapped "R"))
 
 (define (donors-from-bucket bucket-uri)
 

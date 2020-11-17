@@ -143,7 +143,7 @@
                     (step-failed "download" object-id))))
             (step-failed "download" object-id)))])))
 
-(define (bam->read-groups bam-file split-completed dest-dir donor-full-name)
+(define (bam->read-groups bam-file split-completed dest-dir donor-full-name file-id)
   (if (file-exists? split-completed)
       (step-already-completed "bam->read-groups" bam-file)
       (begin
@@ -151,7 +151,8 @@
         (let* ((cmd (format #f "~a split -@ ~a -u /dev/null -f ~s ~s"
                             %samtools %threads
                             (string-append dest-dir "/"
-                                           donor-full-name "_NA_%#.%.")
+                                           donor-full-name "_"
+                                           file-id "_%#.%.")
                             bam-file))
                (port         (open-input-pipe cmd))
                (split-output (get-string-all port)))
@@ -168,7 +169,7 @@
                            split-output)
                 (step-failed "bam->read-groups" bam-file)))))))
 
-(define (read-groups->fastq dest-dir fastq-dir donor-full-name)
+(define (read-groups->fastq dest-dir fastq-dir donor-full-name file-id)
   (if (file-exists? (string-append fastq-dir "/unmap_complete"))
       (step-already-completed "read-groups->fastq" fastq-dir)
       (let ((split-files (scandir dest-dir
@@ -184,8 +185,8 @@
                      (log-debug "read-groups->fastq" "Unmapping ~s." file)
                      (let* ((parts          (string-split (basename file ".bam") #\_))
                             (lane           (list-ref parts 2))
-                            (dest-filename  (format #f  "~a/~a_NA_S1_L~3,,,'0@a"
-                                                    fastq-dir donor-full-name lane))
+                            (dest-filename  (format #f  "~a/~a_~a_S1_L~3,,,'0@a"
+                                                    fastq-dir donor-full-name file-id lane))
                             (part-complete  (string-append dest-filename ".complete")))
                        (if (file-exists? part-complete)
                            (step-completed "read-groups->fastq" dest-filename)
@@ -285,9 +286,9 @@
     (cond
      [(not (download-file file-data))
       #f]
-     [(not (bam->read-groups bam-file split-completed dest-dir donor-full-name))
+     [(not (bam->read-groups bam-file split-completed dest-dir donor-full-name file-id))
       #f]
-     [(not (read-groups->fastq dest-dir fastq-dir donor-full-name))
+     [(not (read-groups->fastq dest-dir fastq-dir donor-full-name file-id))
       #f]
      [(not (upload-to-the-conglomerates-daughter fastq-dir donor-full-name))
       #f]

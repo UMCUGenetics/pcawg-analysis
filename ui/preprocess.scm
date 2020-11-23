@@ -177,10 +177,7 @@
             (n-par-for-each (simultaneous-donors)
                             (lambda (donor-id)
                               (process-donor donor-id metadata))
-                            donors)
-
-            ;; Wait for the pipeline runs to finish.
-            (for-each join-thread (delete (current-thread) (all-threads)))))
+                            donors)))
          ((donor-id)
           (let ((metadata (metadata-for-donor (donor-id))))
             (process-donor (donor-id) metadata)))

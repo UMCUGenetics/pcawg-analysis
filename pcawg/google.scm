@@ -16,6 +16,7 @@
 (define-module (pcawg google)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 popen)
+  #:use-module (ice-9 rdelim)
   #:use-module (json)
   #:use-module (pcawg tools)
   #:use-module (logger)
@@ -30,34 +31,45 @@
             available-n2d-cpus
 
             bucket-exists?
-            may-run-pipeline-run?))
+            may-run-pipeline-run?
+
+            get-token
+            token-expires-in))
 
 ;; OAuth token management.
 ;; ----------------------------------------------------------------------------
 
-(define (get-token) (getenv "GCS_OAUTH_TOKEN"))
+(define (get-token)
+  (let ((token (getenv "GCS_OAUTH_TOKEN")))
+    (if (and token (token-expires-in token))
+        token
+        (let* ((cmd   (string-append %gcloud
+                       " auth application-default print-access-token"))
+               (port  (open-input-pipe cmd))
+               (token (read-line port)))
+          (setenv "GCS_OAUTH_TOKEN" token)
+          token))))
 
-(define (token-expires-in)
-  "Return the number of seconds the current token is valid."
-  (let ((token (get-token)))
-    (if token
-        (catch #t
-          (lambda _
-            (call-with-values
+(define (token-expires-in token)
+  "Return the number of seconds that TOKEN is valid."
+  (if token
+      (catch #t
+        (lambda _
+          (call-with-values
               (lambda _
                 (http-get (string-append
                            "https://www.googleapis.com/oauth2/v1"
                            "/tokeninfo?access_token=" token "")
                           #:headers    '((accept . ((application/json))))
                           #:streaming? #t))
-              (lambda (header port)
-                (if (eq? (response-code header) 200)
-                    (let ((data (json->scm port)))
-                      (assoc-ref data "expires_in"))
-                    #f))))
-          (lambda (key . args)
-            #f))
-        #f)))
+            (lambda (header port)
+              (if (eq? (response-code header) 200)
+                  (let ((data (json->scm port)))
+                    (assoc-ref data "expires_in"))
+                  #f))))
+        (lambda (key . args)
+          #f))
+      #f))
 
 ;; Quota management.
 ;; ----------------------------------------------------------------------------

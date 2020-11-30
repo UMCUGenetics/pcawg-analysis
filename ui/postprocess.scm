@@ -8,6 +8,7 @@
   #:use-module (logger)
   #:use-module (pcawg filesystem)
   #:use-module (pcawg tools)
+  #:use-module (pcawg google)
   #:use-module (pcawg unmapped-reads)
   #:use-module (srfi srfi-1)
 
@@ -82,6 +83,39 @@
     (close-port port)
     output))
 
+(define* (process-jobs donors number-of-jobs report-bucket store-directory
+                       #:optional (threads '()))
+  (cond
+   ((or (>= (length threads) number-of-jobs)
+        (null? donors))
+
+    ;; Wait for the current jobs to finish.
+    (while (any not (map thread-exited? threads))
+      (sleep 1))
+
+    ;; Process the remaining donors.
+    (if (null? donors)
+        #t
+        (begin
+          ;; Refresh the auth token.
+          ;; It sets the environment variable GCS_OAUTH_TOKEN as side effect,
+          ;; so we don't need to do anything else.
+          (log-debug "process-jobs" "Token expires in ~a seconds."
+                     (token-expires-in (get-token)))
+
+          ;; Continue processing more donors.
+          (process-jobs donors number-of-jobs report-bucket store-directory '()))))
+
+   ;; Spawn multiple jobs.
+   (else
+    (let ((donor (car donors)))
+      (process-jobs (cdr donors) number-of-jobs report-bucket store-directory
+                    (cons (call-with-new-thread
+                           (lambda _
+                             (donor->unmapped-reads
+                              report-bucket store-directory donor)))
+                          threads))))))
+
 (define (do-postprocess options)
   (let ((config (getopt-long options program-options)))
 
@@ -109,10 +143,7 @@
     (log-debug "postprocess" "Started.")
     (log-error "postprocess" "Started.")
     (let ((donors (donors-from-bucket (assoc-ref config 'report-bucket))))
-      (n-par-for-each (string->number (assoc-ref config 'simultaneous-donors))
-                      (lambda (id)
-                        (donor->unmapped-reads
-                         (assoc-ref config 'report-bucket)
-                         (assoc-ref config 'store-directory)
-                         id))
-                      donors))))
+      (process-jobs donors
+                    (string->number (assoc-ref config 'simultaneous-donors))
+                    (assoc-ref config 'report-bucket)
+                    (assoc-ref config 'store-directory)))))

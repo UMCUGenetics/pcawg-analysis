@@ -19,6 +19,8 @@
   #:use-module (json)
   #:use-module (pcawg tools)
   #:use-module (logger)
+  #:use-module (web client)
+  #:use-module (web response)
 
   #:export (available-cpus
             available-preemptible-cpus
@@ -29,6 +31,33 @@
 
             bucket-exists?
             may-run-pipeline-run?))
+
+;; OAuth token management.
+;; ----------------------------------------------------------------------------
+
+(define (get-token) (getenv "GCS_OAUTH_TOKEN"))
+
+(define (token-expires-in)
+  "Return the number of seconds the current token is valid."
+  (let ((token (get-token)))
+    (if token
+        (catch #t
+          (lambda _
+            (call-with-values
+              (lambda _
+                (http-get (string-append
+                           "https://www.googleapis.com/oauth2/v1"
+                           "/tokeninfo?access_token=" token "")
+                          #:headers    '((accept . ((application/json))))
+                          #:streaming? #t))
+              (lambda (header port)
+                (if (eq? (response-code header) 200)
+                    (let ((data (json->scm port)))
+                      (assoc-ref data "expires_in"))
+                    #f))))
+          (lambda (key . args)
+            #f))
+        #f)))
 
 ;; Quota management.
 ;; ----------------------------------------------------------------------------

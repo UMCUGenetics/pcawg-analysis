@@ -47,6 +47,7 @@
                        " auth application-default print-access-token"))
                (port  (open-input-pipe cmd))
                (token (read-line port)))
+          (close-pipe port)
           (setenv "GCS_OAUTH_TOKEN" token)
           token))))
 

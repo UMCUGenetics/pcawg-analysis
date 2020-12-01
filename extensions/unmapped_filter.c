@@ -94,14 +94,23 @@ extract_unmapped_reads (SCM input_scm,
       return print_bam_header_error (output_file);
     }
 
+  /* Use the index to obtain the total number of unmapped reads. */
+  hts_idx_t *bam_index = NULL;
+  uint64_t total_unmapped_reads    = 0;
+  uint64_t observed_unmapped_reads = 0;
+
+  bam_index = sam_index_load (bam_input_stream, input_file);
+  total_unmapped_reads = hts_idx_get_n_no_coor (bam_index);
+  hts_idx_destroy (bam_index);
+
   /* Read -> filter ->write the SAM/BAM/CRAM reads.
    * ----------------------------------------------------------------------- */
 
   bam1_t *alignment = bam_init1();
   while (sam_read1 (bam_input_stream, bam_header, alignment) > 0)
     {
-      bool keep_read = false;
-
+      bool is_soft_clipped = false;
+      bool is_unmapped     = false
       /* Look for soft-clipped reads.
        * ------------------------------------------------------------------- */
 
@@ -121,20 +130,21 @@ extract_unmapped_reads (SCM input_scm,
 
               if (operator == BAM_CSOFT_CLIP &&
                   operation_length > softclip_min_length)
-                keep_read = true;
+                is_soft_clipped = true;
             }
         }
 
       /* Look in the flag field.
        * ------------------------------------------------------------------- */
       #define flag alignment->core.flag
-      keep_read = keep_read
+      is_unmapped =
         || (flag & BAM_FUNMAP)
         || ((flag & BAM_FPAIRED) && (flag & BAM_FUNMAP)  && (flag & BAM_FMUNMAP))
         || ((flag & BAM_FPAIRED) && (flag & BAM_FMUNMAP) && (flag & BAM_FREAD1))
         || ((flag & BAM_FPAIRED) && (flag & BAM_FUNMAP)  && (flag & BAM_FREAD2));
 
-      if (keep_read)
+      if (is_unmapped) observed_unmapped_reads++;
+      if (is_soft_clipped || is_unmapped)
         {
           if (sam_write1 (bam_output_stream, bam_header, alignment) <= 0)
             return
@@ -156,7 +166,9 @@ extract_unmapped_reads (SCM input_scm,
 
   return (scm_values
           (scm_list_2
-           (SCM_BOOL_T, SCM_UNDEFINED)));
+           (SCM_BOOL_T, (scm_list_2
+                         (scm_from_uint64 (total_unmapped_reads)
+                          scm_from_uint64 (observed_unmapped_reads))))));
 }
 
 void

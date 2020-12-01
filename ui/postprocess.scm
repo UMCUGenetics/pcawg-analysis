@@ -54,6 +54,9 @@
                   (call-with-output-file done-file
                     (lambda (port) (format port "")))
                   (log-debug "donor->unmapped-reads" "Finished: ~s" donor-id)
+                  (log-debug "donor->unmapped-reads"
+                   "~s has ~a reads without a coordinate, and ~a were found."
+                   donor-id (car message) (cadr message))
                   #t))))))
 
   (extract-unmapped "T")

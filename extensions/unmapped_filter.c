@@ -110,7 +110,8 @@ extract_unmapped_reads (SCM input_scm,
   while (sam_read1 (bam_input_stream, bam_header, alignment) > 0)
     {
       bool is_soft_clipped = false;
-      bool is_unmapped     = false
+      bool is_unmapped     = false;
+
       /* Look for soft-clipped reads.
        * ------------------------------------------------------------------- */
 
@@ -137,8 +138,7 @@ extract_unmapped_reads (SCM input_scm,
       /* Look in the flag field.
        * ------------------------------------------------------------------- */
       #define flag alignment->core.flag
-      is_unmapped =
-        || (flag & BAM_FUNMAP)
+      is_unmapped = (flag & BAM_FUNMAP)
         || ((flag & BAM_FPAIRED) && (flag & BAM_FUNMAP)  && (flag & BAM_FMUNMAP))
         || ((flag & BAM_FPAIRED) && (flag & BAM_FMUNMAP) && (flag & BAM_FREAD1))
         || ((flag & BAM_FPAIRED) && (flag & BAM_FUNMAP)  && (flag & BAM_FREAD2));
@@ -166,9 +166,10 @@ extract_unmapped_reads (SCM input_scm,
 
   return (scm_values
           (scm_list_2
-           (SCM_BOOL_T, (scm_list_2
-                         (scm_from_uint64 (total_unmapped_reads)
-                          scm_from_uint64 (observed_unmapped_reads))))));
+           (SCM_BOOL_T,
+            (scm_list_2
+             (scm_from_uint64 (total_unmapped_reads),
+              scm_from_uint64 (observed_unmapped_reads))))));
 }
 
 void

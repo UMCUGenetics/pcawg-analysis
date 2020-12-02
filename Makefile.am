@@ -18,41 +18,45 @@ SUBDIRS                 = extensions
 
 include $(top_srcdir)/build-aux/guile.am
 
-SOURCES =                  \
-  logger.scm               \
-  ui/panel-file.scm        \
-  ui/remove-donor.scm      \
-  ui/extract-region.scm    \
-  ui/postprocess.scm       \
-  ui/preprocess.scm        \
-  pcawg/bam-regions.scm    \
-  pcawg/config.scm         \
-  pcawg/dcc-portal.scm     \
-  pcawg/google.scm         \
-  pcawg/unmapped-reads.scm \
-  pcawg/hartwig.scm        \
-  pcawg/filesystem.scm     \
+SOURCES =                                        \
+  logger.scm                                     \
+  ui/panel-file.scm                              \
+  ui/remove-donor.scm                            \
+  ui/extract-region.scm                          \
+  ui/postprocess.scm                             \
+  ui/preprocess.scm                              \
+  ui/verify-unmapped.scm                         \
+  pcawg/bam-regions.scm                          \
+  pcawg/config.scm                               \
+  pcawg/dcc-portal.scm                           \
+  pcawg/google.scm                               \
+  pcawg/unmapped-reads.scm                       \
+  pcawg/verify-unmapped.scm                      \
+  pcawg/hartwig.scm                              \
+  pcawg/filesystem.scm                           \
   pcawg/tools.scm
 
-EXTRA_DIST     += pcawg/tools.scm.in          \
-                  pcawg/unmapped-reads.scm.in \
-                  acontrol.in                 \
+EXTRA_DIST     += pcawg/tools.scm.in             \
+                  pcawg/unmapped-reads.scm.in    \
+                  pcawg/verify-unmapped.scm.in   \
+                  acontrol.in                    \
                   env.in
 
 bin_SCRIPTS     = acontrol
 
 # Build docker image with Guix
 docker: dist
-	guix pack -C gzip -e '(load "environment.scm")' \
-             --with-source=pcawg-analysis-$(VERSION).tar.gz \
-             --format=docker \
+	guix pack -C gzip -e '(load "environment.scm")'                      \
+             --with-source=pcawg-analysis-$(VERSION).tar.gz                  \
+             --format=docker                                                 \
              -S /bin=bin -S /lib=lib -S /share=share -S /etc=etc -S /var=var \
-             glibc-utf8-locales tzdata coreutils bash grep gawk net-base strace \
-             python google-cloud-sdk hmf-google-pipeline
+             glibc-utf8-locales tzdata coreutils bash grep gawk net-base     \
+             strace python google-cloud-sdk hmf-google-pipeline
 
 pack: dist
-	guix pack -C gzip -e '(load "environment.scm")' \
-             --with-source=pcawg-analysis-$(VERSION).tar.gz \
-             -S /bin=bin -S /share=share -S /lib=lib \
-             glibc-utf8-locales tzdata coreutils bash grep gawk net-base strace \
-             python google-cloud-sdk hmf-google-pipeline guile emacs-geiser
+	guix pack -C gzip -e '(load "environment.scm")'                      \
+             --with-source=pcawg-analysis-$(VERSION).tar.gz                  \
+             -S /bin=bin -S /share=share -S /lib=lib                         \
+             glibc-utf8-locales tzdata coreutils bash grep gawk net-base     \
+             strace python google-cloud-sdk hmf-google-pipeline guile        \
+             emacs-geiser

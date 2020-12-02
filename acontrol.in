@@ -12,6 +12,7 @@
              (ice-9 threads)
              (logger)
              (ui extract-region)
+             (ui verify-unmapped)
              (ui postprocess)
              (ui preprocess)
              (ui panel-file)
@@ -39,6 +40,7 @@
      "    extract-region"
      "    preprocess"
      "    postprocess"
+     "    verify-unmapped"
      "    panel-file"
      "    remove-donor"
      ""
@@ -67,5 +69,6 @@
          [(string= subcommand "preprocess")      (do-preprocess (cdr options))]
          [(string= subcommand "panel-file")      (do-panel-file (cdr options))]
          [(string= subcommand "remove-donor")    (do-remove-donor (cdr options))]
+         [(string= subcommand "verify-unmapped") (do-verify-unmapped (cdr options))]
          [else                                   (process-regular-options options)]))
       (process-regular-options options)))

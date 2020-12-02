@@ -145,7 +145,8 @@ AC_CONFIG_FILES([
   extensions/Makefile
   pcawg/tools.scm
   pcawg/bam-regions.scm
-  pcawg/unmapped-reads.scm])
+  pcawg/unmapped-reads.scm
+  pcawg/verify-unmapped.scm])
 
 PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES([htslib], [htslib])

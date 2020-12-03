@@ -98,6 +98,9 @@
     (if (null? donors)
         #t
         (begin
+          ;; Force a garbage collection round now.
+          (gc)
+
           ;; Refresh the auth token.
           ;; It sets the environment variable GCS_OAUTH_TOKEN as side effect,
           ;; so we don't need to do anything else.

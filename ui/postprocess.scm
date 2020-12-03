@@ -48,12 +48,13 @@
               (extract-unmapped-reads input-file output-file "bam" 20 #t)
             (if (not success?)
                 (begin
-                  (log-error "donor->unmapped-reads" "Error: ~s" message)
+                  (log-error "donor->unmapped-reads" "Error: ~s: ~s"
+                             full-id message)
                   #f)
                 (begin
                   (call-with-output-file done-file
                     (lambda (port) (format port "")))
-                  (log-debug "donor->unmapped-reads" "Finished: ~s" donor-id)
+                  (log-debug "donor->unmapped-reads" "Finished: ~s" full-id)
                   (log-debug "donor->unmapped-reads"
                    "~s has ~a reads without a coordinate, and ~a were found."
                    donor-id (car message) (cadr message))
@@ -100,6 +101,9 @@
     (if (null? donors)
         #t
         (begin
+          ;; Force a garbage collection round now.
+          (gc)
+
           ;; Refresh the auth token.
           ;; It sets the environment variable GCS_OAUTH_TOKEN as side effect,
           ;; so we don't need to do anything else.

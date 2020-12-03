@@ -24,11 +24,13 @@
 #include <string.h>
 
 SCM
-print_bam_file_error (const char *file_name)
+print_bam_file_error (char *file_name)
 {
   /* Now this looks quite Lispy, eh? */
   char error_msg[255];
   snprintf (error_msg, 255, "Cannot open '%s'.", file_name);
+
+  free (file_name);
 
   return (scm_values
           (scm_list_3
@@ -38,12 +40,22 @@ print_bam_file_error (const char *file_name)
 }
 
 SCM
-print_bam_header_error (const char *file_name)
+print_bam_header_error ()
 {
   return (scm_values
           (scm_list_3
            (SCM_BOOL_F,
             scm_from_latin1_string ("Cannot read header."),
+            SCM_UNDEFINED)));
+}
+
+SCM
+print_bam_index_error ()
+{
+  return (scm_values
+          (scm_list_3
+           (SCM_BOOL_F,
+            scm_from_latin1_string ("Cannot read index."),
             SCM_UNDEFINED)));
 }
 
@@ -63,30 +75,41 @@ verify_unmapped_reads (SCM input_scm, SCM output_scm)
   htsFile   *bam_output_stream = NULL;
 
   bam_input_stream = hts_open (input_file, "r");
-  if (!bam_input_stream)
-    return print_bam_file_error (input_file);
+  if (! bam_input_stream)
+    {
+      free (output_file);
+      return print_bam_file_error (input_file);
+    }
 
   bam_output_stream = hts_open (output_file, "r");
-  if (!bam_output_stream)
+  if (! bam_output_stream)
     {
+      free (input_file);
       hts_close (bam_input_stream);
       return print_bam_file_error (output_file);
     }
 
+
   /* Read/write the SAM/BAM/CRAM header.
    * -------------------------------------------------------------------- */
   bam_input_header = sam_hdr_read (bam_input_stream);
-  if (!bam_input_header)
+  if (! bam_input_header)
     {
+      free (input_file);
+      free (output_file);
       hts_close (bam_input_stream);
-      return print_bam_header_error (input_file);
+      hts_close (bam_output_stream);
+      return print_bam_header_error ();
     }
 
   bam_output_header = sam_hdr_read (bam_output_stream);
-  if (!bam_output_header)
+  if (! bam_output_header)
     {
+      free (input_file);
+      free (output_file);
+      hts_close (bam_input_stream);
       hts_close (bam_output_stream);
-      return print_bam_header_error (output_file);
+      return print_bam_header_error ();
     }
 
   /* Use the index to obtain the total number of unmapped reads. */
@@ -95,18 +118,28 @@ verify_unmapped_reads (SCM input_scm, SCM output_scm)
   uint64_t observed_unmapped_reads = 0;
 
   bam_input_index = sam_index_load (bam_input_stream, input_file);
+  if (! bam_input_index)
+    {
+      free (input_file);
+      free (output_file);
+      hts_close (bam_input_stream);
+      hts_close (bam_output_stream);
+      return print_bam_index_error (output_file);
+    }
+
   input_unmapped_reads = hts_idx_get_n_no_coor (bam_input_index);
   hts_idx_destroy (bam_input_index);
 
+  free (input_file);
+  free (output_file);
+
   bam1_t *alignment = bam_init1();
-  while (sam_read1 (bam_output_stream, bam_output_header, alignment) > 0)
+  int state = 0;
+  while ((state = sam_read1 (bam_output_stream, bam_output_header, alignment)) >= 0)
     {
       if ((alignment->core.flag & BAM_FUNMAP))
         observed_unmapped_reads++;
     }
-
-  free (input_file);
-  free (output_file);
 
   bam_destroy1 (alignment);
   bam_hdr_destroy (bam_input_header);
@@ -114,11 +147,16 @@ verify_unmapped_reads (SCM input_scm, SCM output_scm)
   hts_close (bam_input_stream);
   hts_close (bam_output_stream);
 
-  return (scm_values
-          (scm_list_3
-           (SCM_BOOL_T,
-            scm_from_uint64 (input_unmapped_reads),
-            scm_from_uint64 (observed_unmapped_reads))));
+  return (state == -1)
+    ? (scm_values
+       (scm_list_3
+        (SCM_BOOL_T,
+         scm_from_uint64 (input_unmapped_reads),
+         scm_from_uint64 (observed_unmapped_reads))))
+    : (scm_values
+          (scm_list_2
+           (SCM_BOOL_F,
+            scm_from_latin1_string ("Processing reads ended prematurely."))));
 }
 
 void

@@ -23,12 +23,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* This macro is purely for syntactic joy, and debugging hell. */
+#define flag alignment->core.flag
+
 SCM
-print_bam_file_error (const char *file_name)
+print_bam_file_error (char *file_name)
 {
   /* Now this looks quite Lispy, eh? */
   char error_msg[255];
   snprintf (error_msg, 255, "Cannot open '%s'.", file_name);
+
+  free (file_name);
 
   return (scm_values
           (scm_list_2
@@ -65,7 +70,10 @@ extract_unmapped_reads (SCM input_scm,
 
   bam_input_stream = hts_open (input_file, "r");
   if (!bam_input_stream)
-    return print_bam_file_error (input_file);
+    {
+      free (output_file);
+      return print_bam_file_error (input_file);
+    }
 
   bam_output_stream = (! strcmp (output_format, "bam"))
     ? hts_open (output_file, "wb")
@@ -73,6 +81,7 @@ extract_unmapped_reads (SCM input_scm,
 
   if (!bam_output_stream)
     {
+      free (input_file);
       hts_close (bam_input_stream);
       return print_bam_file_error (output_file);
     }
@@ -101,13 +110,14 @@ extract_unmapped_reads (SCM input_scm,
 
   bam_index = sam_index_load (bam_input_stream, input_file);
   total_unmapped_reads = hts_idx_get_n_no_coor (bam_index);
-  hts_idx_destroy (bam_index);
+  hts_idx_destroy (bam_index); bam_index = NULL;
 
   /* Read -> filter ->write the SAM/BAM/CRAM reads.
    * ----------------------------------------------------------------------- */
 
   bam1_t *alignment = bam_init1();
-  while (sam_read1 (bam_input_stream, bam_header, alignment) > 0)
+  int state = 0;
+  while ((state = sam_read1 (bam_input_stream, bam_header, alignment)) >= 0)
     {
       bool is_soft_clipped = false;
       bool is_unmapped     = false;
@@ -137,21 +147,31 @@ extract_unmapped_reads (SCM input_scm,
 
       /* Look in the flag field.
        * ------------------------------------------------------------------- */
-      #define flag alignment->core.flag
       is_unmapped = (flag & BAM_FUNMAP)
-        || ((flag & BAM_FPAIRED) && (flag & BAM_FUNMAP)  && (flag & BAM_FMUNMAP))
-        || ((flag & BAM_FPAIRED) && (flag & BAM_FMUNMAP) && (flag & BAM_FREAD1))
-        || ((flag & BAM_FPAIRED) && (flag & BAM_FUNMAP)  && (flag & BAM_FREAD2));
+       || ((flag & BAM_FPAIRED) && (flag & BAM_FUNMAP)  && (flag & BAM_FMUNMAP))
+       || ((flag & BAM_FPAIRED) && (flag & BAM_FMUNMAP) && (flag & BAM_FREAD1))
+       || ((flag & BAM_FPAIRED) && (flag & BAM_FUNMAP)  && (flag & BAM_FREAD2));
 
-      if (is_unmapped) observed_unmapped_reads++;
       if (is_soft_clipped || is_unmapped)
         {
+          if (is_unmapped) observed_unmapped_reads++;
           if (sam_write1 (bam_output_stream, bam_header, alignment) <= 0)
-            return
-              (scm_values
-               (scm_list_2
-                (SCM_BOOL_F, scm_from_latin1_string
-                 ("An error occurred while writing an alignment record."))));
+            {
+              free (input_file);
+              free (output_file);
+              free (output_format);
+
+              bam_destroy1 (alignment);
+              bam_hdr_destroy (bam_header);
+              hts_close (bam_input_stream);
+              hts_close (bam_output_stream);
+
+              return
+                (scm_values
+                 (scm_list_2
+                  (SCM_BOOL_F, scm_from_latin1_string
+                   ("An error occurred while writing an alignment record."))));
+            }
         }
     }
 
@@ -164,12 +184,17 @@ extract_unmapped_reads (SCM input_scm,
   hts_close (bam_input_stream);
   hts_close (bam_output_stream);
 
-  return (scm_values
+  return (state == -1)
+    ? (scm_values
+       (scm_list_2
+        (SCM_BOOL_T,
+         (scm_list_2
+          (scm_from_uint64 (total_unmapped_reads),
+           scm_from_uint64 (observed_unmapped_reads))))))
+    : (scm_values
           (scm_list_2
-           (SCM_BOOL_T,
-            (scm_list_2
-             (scm_from_uint64 (total_unmapped_reads),
-              scm_from_uint64 (observed_unmapped_reads))))));
+           (SCM_BOOL_F,
+            scm_from_latin1_string ("Processing reads ended prematurely."))));
 }
 
 void

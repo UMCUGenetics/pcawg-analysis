@@ -51,12 +51,13 @@
               (extract-reads-for-region input-file output-file "bam" region)
             (if (not success?)
                 (begin
-                  (log-error "donor->extract-region" "Error: ~s" message)
+                  (log-error "donor->extract-region" "Error: ~s: ~s"
+                             full-id message)
                   #f)
                 (begin
                   (call-with-output-file done-file
                     (lambda (port) (format port "")))
-                  (log-debug "donor->extract-region" "Finished: ~s" donor-id)
+                  (log-debug "donor->extract-region" "Finished: ~s" full-id)
                   #t))))))
 
   (extract-region "T")

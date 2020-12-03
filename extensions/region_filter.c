@@ -24,31 +24,35 @@
 #include <string.h>
 
 SCM
-print_bam_file_error (const char *file_name)
+print_bam_file_error (char *file_name)
 {
   /* Now this looks quite Lispy, eh? */
   char error_msg[255];
   snprintf (error_msg, 255, "Cannot open '%s'.", file_name);
 
+  free (file_name);
+
   return (scm_values
           (scm_list_2
            (SCM_BOOL_F, scm_from_latin1_string (error_msg))));
 }
 
 SCM
-print_bam_index_file_error (const char *file_name)
+print_bam_index_file_error (char *file_name)
 {
   /* Now this looks quite Lispy, eh? */
   char error_msg[255];
   snprintf (error_msg, 255, "Cannot open index for '%s'.", file_name);
 
+  free (file_name);
+
   return (scm_values
           (scm_list_2
            (SCM_BOOL_F, scm_from_latin1_string (error_msg))));
 }
 
 SCM
-print_bam_header_error (const char *file_name)
+print_bam_header_error ()
 {
   return (scm_values
           (scm_list_2
@@ -76,38 +80,67 @@ extract_reads_for_region (SCM input_scm,
   hts_idx_t *bam_index = NULL;
 
   bam_input_stream = hts_open (input_file, "r");
-  if (!bam_input_stream)
-    return print_bam_file_error (input_file);
+  if (! bam_input_stream)
+    {
+      free (output_file);
+      free (output_format);
+      free (region);
+
+      return print_bam_file_error (input_file);
+    }
 
   bam_index = sam_index_load (bam_input_stream, input_file);
   if (bam_index == 0)
-    return print_bam_index_file_error (input_file);
+    {
+      free (output_file);
+      free (output_format);
+      free (region);
+
+      return print_bam_index_file_error (input_file);
+    }
 
   bam_output_stream = (! strcmp (output_format, "bam"))
     ? hts_open (output_file, "wb")
     : hts_open (output_file, "w");
 
-  if (!bam_output_stream)
+  if (! bam_output_stream)
     {
+      free (input_file);
+      free (output_format);
+      free (region);
       hts_close (bam_input_stream);
+
       return print_bam_file_error (output_file);
     }
 
   /* Read/write the SAM/BAM/CRAM header.
    * -------------------------------------------------------------------- */
   bam_header = sam_hdr_read (bam_input_stream);
-  if (!bam_header)
+  if (! bam_header)
     {
+      free (input_file);
+      free (output_file);
+      free (output_format);
+      free (region);
+
       hts_close (bam_input_stream);
-      return print_bam_header_error (input_file);
+      hts_close (bam_output_stream);
+
+      return print_bam_header_error ();
     }
 
   int header_write_result = sam_hdr_write (bam_output_stream, bam_header);
   if (header_write_result < 0)
     {
+      free (input_file);
+      free (output_file);
+      free (output_format);
+      free (region);
+
       hts_close (bam_input_stream);
       hts_close (bam_output_stream);
-      return print_bam_header_error (output_file);
+
+      return print_bam_header_error ();
     }
 
   /* Read -> filter -> write the SAM/BAM/CRAM reads.
@@ -115,12 +148,11 @@ extract_reads_for_region (SCM input_scm,
 
   SCM output = NULL;
 
-  hts_itr_t *iterator;
-  iterator = sam_itr_querys (bam_index, bam_header, region);
+  hts_itr_t *iterator = sam_itr_querys (bam_index, bam_header, region);
+  int state = 0;
   if (iterator != 0)
     {
       bam1_t *alignment = bam_init1 ();
-      int state = 0;
       while ((state = sam_itr_next (bam_input_stream,
                                     iterator,
                                     alignment)) >= 0)
@@ -145,6 +177,7 @@ extract_reads_for_region (SCM input_scm,
                 ("Cannot find region.")));
 
   sam_itr_destroy (iterator);
+  hts_idx_destroy (bam_index); bam_index = NULL;
 
   free (input_file);
   free (output_file);
@@ -156,9 +189,17 @@ extract_reads_for_region (SCM input_scm,
   hts_close (bam_output_stream);
 
   if (output == NULL)
-    output = scm_values
-              (scm_list_2
-               (SCM_BOOL_T, SCM_UNDEFINED));
+    {
+      if (state == -1)
+        output = scm_values
+          (scm_list_2
+           (SCM_BOOL_T, SCM_UNDEFINED));
+      else
+        scm_values
+          (scm_list_2
+           (SCM_BOOL_F, scm_from_latin1_string
+            ("Processing reads ended prematurely.")));
+    }
 
   return output;
 }

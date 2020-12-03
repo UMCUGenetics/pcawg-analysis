@@ -57,7 +57,7 @@
                   (log-debug "donor->unmapped-reads" "Finished: ~s" full-id)
                   (log-debug "donor->unmapped-reads"
                    "~s has ~a reads without a coordinate, and ~a were found."
-                   donor-id (car message) (cadr message))
+                   full-id (car message) (cadr message))
                   #t))))))
 
   (extract-unmapped "T")

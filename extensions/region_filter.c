@@ -103,10 +103,10 @@ extract_reads_for_region (SCM input_scm,
     ? hts_open (output_file, "wb")
     : hts_open (output_file, "w");
 
+  free (output_format);
   if (! bam_output_stream)
     {
       free (input_file);
-      free (output_format);
       free (region);
       hts_close (bam_input_stream);
 
@@ -120,7 +120,6 @@ extract_reads_for_region (SCM input_scm,
     {
       free (input_file);
       free (output_file);
-      free (output_format);
       free (region);
 
       hts_close (bam_input_stream);
@@ -134,7 +133,6 @@ extract_reads_for_region (SCM input_scm,
     {
       free (input_file);
       free (output_file);
-      free (output_format);
       free (region);
 
       hts_close (bam_input_stream);
@@ -181,7 +179,6 @@ extract_reads_for_region (SCM input_scm,
 
   free (input_file);
   free (output_file);
-  free (output_format);
   free (region);
 
   bam_hdr_destroy (bam_header);

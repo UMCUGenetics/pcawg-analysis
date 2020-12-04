@@ -52,10 +52,9 @@ SCM
 print_bam_index_error ()
 {
   return (scm_values
-          (scm_list_3
+          (scm_list_2
            (SCM_BOOL_F,
-            scm_from_latin1_string ("Cannot read index."),
-            SCM_UNDEFINED)));
+            scm_from_latin1_string ("Cannot read index."))));
 }
 
 SCM

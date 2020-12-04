@@ -124,7 +124,7 @@ verify_unmapped_reads (SCM input_scm, SCM output_scm)
       free (output_file);
       hts_close (bam_input_stream);
       hts_close (bam_output_stream);
-      return print_bam_index_error (output_file);
+      return print_bam_index_error ();
     }
 
   input_unmapped_reads = hts_idx_get_n_no_coor (bam_input_index);

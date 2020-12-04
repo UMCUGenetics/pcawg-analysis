@@ -49,6 +49,16 @@ print_bam_header_error (const char *file_name)
 }
 
 SCM
+print_bam_index_error ()
+{
+  return (scm_values
+          (scm_list_3
+           (SCM_BOOL_F,
+            scm_from_latin1_string ("Cannot read index."),
+            SCM_UNDEFINED)));
+}
+
+SCM
 extract_unmapped_reads (SCM input_scm,
                         SCM output_scm,
                         SCM output_format_scm,
@@ -109,6 +119,17 @@ extract_unmapped_reads (SCM input_scm,
   uint64_t observed_unmapped_reads = 0;
 
   bam_index = sam_index_load (bam_input_stream, input_file);
+  if (! bam_index)
+    {
+      free (input_file);
+      free (output_file);
+
+      hts_close (bam_input_stream);
+      hts_close (bam_output_stream);
+
+      return print_bam_index_error ();
+    }
+
   total_unmapped_reads = hts_idx_get_n_no_coor (bam_index);
   hts_idx_destroy (bam_index); bam_index = NULL;
 

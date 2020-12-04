@@ -90,7 +90,7 @@ extract_reads_for_region (SCM input_scm,
     }
 
   bam_index = sam_index_load (bam_input_stream, input_file);
-  if (bam_index == 0)
+  if (! bam_index)
     {
       free (output_file);
       free (output_format);

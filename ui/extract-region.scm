@@ -9,6 +9,7 @@
   #:use-module (pcawg filesystem)
   #:use-module (pcawg tools)
   #:use-module (pcawg bam-regions)
+  #:use-module (pcawg google)
   #:use-module (srfi srfi-1)
 
   #:export (do-extract-region))
@@ -87,6 +88,45 @@
     (close-port port)
     output))
 
+(define* (process-jobs donors number-of-jobs report-bucket store-directory
+                       region #:optional (threads '()))
+  (cond
+   ((or (>= (length threads) number-of-jobs)
+        (null? donors))
+
+    ;; Wait for the current jobs to finish.
+    (while (any not (map thread-exited? threads))
+      (sleep 1))
+
+    ;; Process the remaining donors.
+    (if (null? donors)
+        #t
+        (begin
+          ;; Force a garbage collection round now.
+          (gc)
+
+          ;; Refresh the auth token.
+          ;; It sets the environment variable GCS_OAUTH_TOKEN as side effect,
+          ;; so we don't need to do anything else.
+          (log-debug "process-jobs" "Token expires in ~a seconds."
+                     (token-expires-in (get-token)))
+
+          ;; Continue processing more donors.
+          (process-jobs donors number-of-jobs report-bucket store-directory region '()))))
+
+   ;; Spawn multiple jobs.
+   (else
+    (process-jobs (cdr donors)
+                  number-of-jobs
+                  report-bucket
+                  store-directory
+                  region
+                  (cons (call-with-new-thread
+                         (lambda _
+                           (donor->extract-region
+                            report-bucket store-directory (car donors) region)))
+                        threads)))))
+
 (define (do-extract-region options)
   (let ((config (getopt-long options program-options)))
 
@@ -117,12 +157,12 @@
 
     (log-debug "extract-region" "Started.")
     (log-error "extract-region" "Started.")
-    (let ((donors (donors-from-bucket (assoc-ref config 'report-bucket))))
-      (n-par-for-each (string->number (assoc-ref config 'simultaneous-donors))
-                      (lambda (id)
-                        (donor->extract-region
-                         (assoc-ref config 'report-bucket)
-                         (assoc-ref config 'store-directory)
-                         id
-                         (assoc-ref config 'region)))
-                      donors))))
+    (let* ((report-bucket   (assoc-ref config 'report-bucket))
+           (store-directory (assoc-ref config 'store-directory))
+           (region          (assoc-ref config 'region))
+           (donors          (donors-from-bucket report-bucket)))
+      (process-jobs donors
+                    (string->number (assoc-ref config 'simultaneous-donors))
+                    report-bucket
+                    store-directory
+                    region))))

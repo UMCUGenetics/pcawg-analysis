@@ -35,6 +35,12 @@
      "  --help                     -h  Show this message."))
   (exit 0))
 
+(define (donor-is-processed? storedir donor-id region)
+  (let* ((done-ref (format #f "~a/~aR_~a.done" storedir donor-id region))
+	 (done-tum (format #f "~a/~aT_~a.done" storedir donor-id region)))
+    (and (file-exists? done-ref)
+	 (file-exists? done-tum))))
+
 (define (donor->extract-region bucket store-directory donor-id region)
 
   (define (extract-region suffix)
@@ -86,7 +92,7 @@
          (port    (open-input-pipe command))
          (output  (donors-from-port port)))
     (close-port port)
-    output))
+    (sort output string<)))
 
 (define* (process-jobs donors number-of-jobs report-bucket store-directory
                        region #:optional (threads '()))
@@ -116,16 +122,22 @@
 
    ;; Spawn multiple jobs.
    (else
-    (process-jobs (cdr donors)
-                  number-of-jobs
-                  report-bucket
-                  store-directory
-                  region
-                  (cons (call-with-new-thread
-                         (lambda _
-                           (donor->extract-region
-                            report-bucket store-directory (car donors) region)))
-                        threads)))))
+    (let ((donor (car donors)))
+      (if (donor-is-processed? store-directory donor region)
+	  (begin
+	    (log-debug "process-jobs" "~a is already done." donor)
+	    (process-jobs (cdr donors) number-of-jobs report-bucket
+			  store-directory region threads))
+	  (process-jobs (cdr donors)
+			number-of-jobs
+			report-bucket
+			store-directory
+			region
+			(cons (call-with-new-thread
+                               (lambda _
+				 (donor->extract-region
+				  report-bucket store-directory donor region)))
+                              threads)))))))
 
 (define (do-extract-region options)
   (let ((config (getopt-long options program-options)))

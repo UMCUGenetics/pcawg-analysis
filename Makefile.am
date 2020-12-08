@@ -59,4 +59,4 @@ pack: dist
              -S /bin=bin -S /share=share -S /lib=lib                         \
              glibc-utf8-locales tzdata coreutils bash grep gawk net-base     \
              strace python google-cloud-sdk hmf-google-pipeline guile        \
-             emacs-geiser
+             emacs-geiser gdb

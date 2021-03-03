@@ -17,6 +17,7 @@
   #:use-module (ice-9 threads)
   #:use-module (pcawg config)
   #:export (%score-client
+            %gen3-client
             %samtools
             %sambamba
             %curl

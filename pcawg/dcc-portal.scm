@@ -55,12 +55,12 @@
 
 (define (normalize-specimen-type specimen-type)
   (cond
+   ((string-contains-ci specimen-type "normal")
+    'NORMAL)
    ((string-contains-ci specimen-type "tumour")
     'TUMOR)
    ((string-contains-ci specimen-type "tumor")
     'TUMOR)
-   ((string-contains-ci specimen-type "normal")
-    'NORMAL)
    (else
     'UNKNOWN)))
 

@@ -28,6 +28,7 @@
   #:export (metadata-for-project
             metadata-for-donor
             manifest-for-file-id
+            data-bundle-id-for-object-id
             donors-in-project
             files-for-donor
             normalize-specimen-type))
@@ -114,6 +115,30 @@
                              "Response code was ~a"
                              (response-code header))
                   #f)))))))
+
+(define (data-bundle-id-for-object-id object-id)
+  (call-with-values
+      (lambda ()
+        (http-get (string-append
+                   %base-uri "/repository/files?field=fileCopies&type=json&filters="
+                   (uri-encode
+                    (scm->json-string
+                     `((file
+                        (objectId (is . ,object-id)))))))
+                  #:streaming? #t
+                  #:headers '((accept . ((application/json))))))
+    (lambda (header port)
+      (if (eq? (response-code header) 200)
+          (begin
+            (let ((data (json->scm port)))
+              (assoc-ref
+               (vector-ref
+                (assoc-ref (vector-ref (assoc-ref data "hits") 0) "fileCopies") 1)
+               "repoDataBundleId")))
+          (begin
+            (format #t "Response code was ~a"
+                    (response-code header))
+            #f)))))
 
 (define (metadata-for-project project-code)
   (let ((cache-filename (format #f "~a/~a.json" (cache-directory) project-code)))

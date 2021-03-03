@@ -44,8 +44,7 @@
       (http-post (string-append %base-uri "/manifests?filters="
                                 (uri-encode
                                  (scm->json-string
-                                  `((file (id (is . #(,file-id)))))))
-                                "&repos=collaboratory")
+                                  `((file (id (is . #(,file-id))))))))
                  #:headers
                  '((accept       . ((text/plain)))
                    (content-type . (application/x-www-form-urlencoded)))))
@@ -99,7 +98,6 @@
                          (uri-encode
                           (scm->json-string
                            `((file (donorId              (is . #(,donor-id)))
-                                   (repoName             (is . #("Collaboratory - Toronto")))
                                    (experimentalStrategy (is . #("WGS")))
                                    (study                (is . #("PCAWG")))
                                    (fileFormat           (is . #("BAM"))))))))
@@ -128,7 +126,6 @@
                          (uri-encode
                           (scm->json-string
                            `((file (projectCode          (is . #(,project-code)))
-                                   (repoName             (is . #("Collaboratory - Toronto")))
                                    (experimentalStrategy (is . #("WGS")))
                                    (study                (is . #("PCAWG")))
                                    (fileFormat           (is . #("BAM"))))))))

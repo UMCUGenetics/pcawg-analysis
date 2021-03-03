@@ -74,6 +74,7 @@
                  (file-id       . ,(assoc-ref item "id"))
                  (object-id     . ,(assoc-ref item "objectId"))
                  (file-size     . ,(assoc-ref (car fileCopies) "fileSize"))
+                 (file-name     . ,(assoc-ref (car fileCopies) "fileName"))
                  (sample-id     . ,(car (vector->list
                                          (assoc-ref (car donors) "sampleId"))))
                  (specimen-type . ,(normalize-specimen-type

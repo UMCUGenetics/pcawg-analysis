@@ -28,6 +28,7 @@
             %bash))
 
 (define %score-client "@SCORECLIENT@")
+(define %gen3-client  "@GEN3CLIENT@")
 (define %samtools     "@SAMTOOLS@")
 (define %sambamba     "@SAMBAMBA@")
 (define %curl         "@CURL@")

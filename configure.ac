@@ -82,6 +82,13 @@ if test "x$SCORECLIENT" = "x"; then
    AC_MSG_WARN([Cannot find score-client.])
 fi
 
+dnl Test whether the "gen3-client" command is somewhere in path.
+dnl ---------------------------------------------------------------------------
+AC_PATH_PROG([GEN3CLIENT], [gen3-client])
+if test "x$GEN3CLIENT" = "x"; then
+   AC_MSG_WARN([Cannot find gen3-client.])
+fi
+
 dnl Test whether the "samtools" command is somewhere in path.
 dnl ---------------------------------------------------------------------------
 AC_PATH_PROG([SAMTOOLS], [samtools])

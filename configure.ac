@@ -28,7 +28,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h stdio.h])
 AC_CHECK_LIB(guile, scm_with_guile)
 
-GUILE_PKG([3.0])
+GUILE_PKG([3.0 2.2])
 GUILE_PROGS
 GUILE_SITE_DIR
 
@@ -79,7 +79,7 @@ dnl Test whether the "score-client" command is somewhere in path.
 dnl ---------------------------------------------------------------------------
 AC_PATH_PROG([SCORECLIENT], [score-client])
 if test "x$SCORECLIENT" = "x"; then
-   AC_MSG_ERROR([Cannot find score-client.])
+   AC_MSG_WARN([Cannot find score-client.])
 fi
 
 dnl Test whether the "samtools" command is somewhere in path.

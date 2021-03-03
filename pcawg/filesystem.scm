@@ -43,6 +43,26 @@
             lanes-for-sample
             mkdir-p))
 
+;; Debian ships Guile 2.2.4, and that version doesn't have string-replace-substring.
+;; So we backport its implementation (original can be found in Guile's source code
+;; in ‘module/ice-9/string-fun.scm’).
+(define string-replace-substring
+  (if (defined? 'string-replace-substring)
+      (@ (ice-9 string-fun) string-replace-substring)
+      (lambda (str substring replacement)
+        (let ((sublen (string-length substring)))
+          (with-output-to-string
+            (lambda ()
+              (let lp ((start 0))
+                (cond
+                 ((string-contains str substring start)
+                  => (lambda (end)
+                       (display (substring/shared str start end))
+                       (display replacement)
+                       (lp (+ end sublen))))
+                 (else
+                  (display (substring/shared str start)))))))))))
+
 ;; Logging with return values.
 ;; ----------------------------------------------------------------------------
 (define (step-completed step identifier)

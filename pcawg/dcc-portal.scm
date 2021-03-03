@@ -25,7 +25,8 @@
   #:use-module (pcawg config)
   #:use-module (logger)
 
-  #:export (metadata-for-project
+  #:export (metadata-for-pcawg
+            metadata-for-project
             metadata-for-donor
             manifest-for-file-id
             data-bundle-id-for-object-id
@@ -153,6 +154,33 @@
                           (scm->json-string
                            `((file (projectCode          (is . #(,project-code)))
                                    (experimentalStrategy (is . #("WGS")))
+                                   (study                (is . #("PCAWG")))
+                                   (fileFormat           (is . #("BAM"))))))))
+                        #:streaming? #t
+                        #:headers '((accept . ((application/json))))))
+          (lambda (header port)
+            (if (eq? (response-code header) 200)
+                (begin
+                  (let ((data (json->scm port)))
+                    (restructure-metadata data)))
+                (begin
+                  (log-error "metadata-for-project"
+                             "Response code was ~a"
+                             (response-code header))
+                  #f)))))))
+
+(define (metadata-for-pcawg)
+  (let ((cache-filename (format #f "~a/~a.json" (cache-directory) "pcawg")))
+    (if (and (cache-directory)
+             (file-exists? cache-filename))
+        (restructure-metadata (call-with-input-file cache-filename json->scm))
+        (call-with-values
+            (lambda ()
+              (http-get (string-append
+                         %base-uri "/repository/files/export?type=json&filters="
+                         (uri-encode
+                          (scm->json-string
+                           `((file (experimentalStrategy (is . #("WGS")))
                                    (study                (is . #("PCAWG")))
                                    (fileFormat           (is . #("BAM"))))))))
                         #:streaming? #t

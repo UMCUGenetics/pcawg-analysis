@@ -130,15 +130,32 @@
 
 (define (download-file file-data)
   "Downloads the file identified by FILE-DATA to its preconfigured destination."
-  (let* ((file-id       (assoc-ref file-data 'file-id))
-         (object-id     (assoc-ref file-data 'object-id))
-         (expected-size (assoc-ref file-data 'file-size))
-         (filename      (filename-by-file-data file-data)))
+  (let* ((file-id        (assoc-ref file-data 'file-id))
+         (object-id      (assoc-ref file-data 'object-id))
+         (expected-size  (assoc-ref file-data 'file-size))
+         (gen3-object-id (assoc-ref file-data 'gen3-object-id))
+         (filename       (filename-by-file-data file-data)))
     (cond
      [(file-exists? (string-append filename ".complete"))
       (step-already-completed "download" filename)]
      [(not object-id)
       (step-failed "download" file-id)]
+     [gen3-object-id
+      (let* ((manifest      (list->vector `(("object_id" . gen3-object-id))))
+             (manifest-port (tmpfile))
+             (manifest-file (port-filename manifest-port)))
+        (scm->json manifest manifest-port)
+        (let* ((cmd (format #f "~a download-multiple --profile=icgc --manifest=~s --no-prompt"
+                            %gen3-client manifest-file))
+               (port (open-input-pipe cmd)))
+          (if (zero? (status:exit-val (close-pipe port)))
+              (call-with-output-file (string-append filename ".complete")
+                (lambda (port)
+                  (format port "~a" cmd)
+                  (step-completed "download" object-id)))
+              (begin
+                (log-error "download-file" "Download failed.")
+                (step-failed "download" object-id)))))]
      [else
       (let* ((cmd  (format #f "~a url --object-id ~s" %score-client object-id))
              (port (open-input-pipe cmd))

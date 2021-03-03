@@ -16,6 +16,7 @@
     (cache-directory        (single-char #\c) (value #t))
     (debug-log              (single-char #\d) (value #t))
     (error-log              (single-char #\e) (value #t))
+    (gen3-metadata          (single-char #\G) (value #t))
     (google-cmek-path       (single-char #\k) (value #t))
     (google-service-account (single-char #\S) (value #t))
     (google-project         (single-char #\g) (value #t))
@@ -36,6 +37,7 @@
      "  --cache-dir=ARG            -c  Cache directory for HTTP requests."
      "  --debug-log                -d  Where to write the debug log."
      "  --error-log                -e  Where to write the error log."
+     "  --gen3-metadata=ARG        -G  GEN3 file metadata."
      "  --google-cmek-path=ARG     -k  Path to the customer-managed encryption key."
      "  --google-project=ARG       -g  The Google project ID."
      "  --google-region=ARG        -r  The storage region to use."
@@ -51,7 +53,8 @@
 
 (define (process-donor donor-id metadata)
   (log-debug "acontrol" "Processing ~a" donor-id)
-  (let ((files (files-for-donor donor-id metadata)))
+  (let ((files (files-for-donor donor-id
+                 (with-gen3-object-ids metadata (gen3-metadata-file)))))
     (if (every (lambda (t) t)
                (n-par-map 2 bam->fastq files))
         (run-pipeline donor-id)
@@ -68,6 +71,9 @@
 
     (when (assoc-ref config 'cache-directory)
       (set-cache-directory! (assoc-ref config 'cache-directory)))
+
+    (when (assoc-ref config 'gen3-metadata)
+      (set-gen3-metadata-file! (assoc-ref config 'gen3-metadata)))
 
     (when (assoc-ref config 'google-project)
       (set-google-project! (assoc-ref config 'google-project)))

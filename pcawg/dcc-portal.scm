@@ -32,7 +32,9 @@
             data-bundle-id-for-object-id
             donors-in-project
             files-for-donor
-            normalize-specimen-type))
+            normalize-specimen-type
+            gen3-object-id-for-dcc-filename
+            with-gen3-object-ids))
 
 ;; DCC Portal API convenience
 ;; ----------------------------------------------------------------------------
@@ -208,3 +210,23 @@
                         item
                         #f))
                   metadata)))
+
+(define (gen3-object-id-for-dcc-filename gen3-file-data filename)
+  (let ((lst (delete #f (map (lambda (item)
+                               (if (and (string? filename)
+                                        (string= (assoc-ref item "file_name") filename))
+                                   (assoc-ref item "object_id")
+                                   #f))
+                             gen3-file-data))))
+    (if (null? lst)
+        #f
+        (car lst))))
+
+(define (with-gen3-object-ids dcc-metadata gen3-metadata)
+  (map (lambda (collection)
+         (acons 'gen3-object-id
+                (gen3-object-id-for-dcc-filename
+                 gen3-metadata
+                 (assoc-ref collection 'file-name))
+                collection))
+       dcc-metadata))

@@ -76,7 +76,7 @@
     (when (assoc-ref config 'gen3-metadata)
       (set-gen3-metadata! (catch #t
 														(lambda _
-															(list->vector
+															(vector->list
 															 (call-with-input-file
 																	 (assoc-ref config 'gen3-metadata)
 																 json->scm)))

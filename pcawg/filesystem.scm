@@ -134,25 +134,36 @@
          (object-id      (assoc-ref file-data 'object-id))
          (expected-size  (assoc-ref file-data 'file-size))
          (gen3-object-id (assoc-ref file-data 'gen3-object-id))
-         (filename       (filename-by-file-data file-data)))
+         (filename       (filename-by-file-data file-data))
+				 (filename-path  (string-drop-right filename 4)))
     (cond
      [(file-exists? (string-append filename ".complete"))
       (step-already-completed "download" filename)]
      [(not object-id)
       (step-failed "download" file-id)]
      [gen3-object-id
-      (let* ((manifest      (list->vector `(("object_id" . gen3-object-id))))
-             (manifest-port (tmpfile))
+      (let* ((manifest      (list->vector `((("object_id" . ,gen3-object-id)))))
+             (manifest-port (mkstemp! (string-copy "/tmp/manifest-XXXXXX")))
              (manifest-file (port-filename manifest-port)))
         (scm->json manifest manifest-port)
-        (let* ((cmd (format #f "~a download-multiple --profile=icgc --manifest=~s --no-prompt"
-                            %gen3-client manifest-file))
-               (port (open-input-pipe cmd)))
-          (if (zero? (status:exit-val (close-pipe port)))
-              (call-with-output-file (string-append filename ".complete")
-                (lambda (port)
-                  (format port "~a" cmd)
-                  (step-completed "download" object-id)))
+				(force-output manifest-port)
+				(close manifest-port)
+        (let* ((cmd (format #f "~a download-multiple --profile=icgc --manifest=~s --no-prompt --download-path=~s > /dev/null 2> /dev/null"
+                            %gen3-client manifest-file filename-path)))
+					(log-debug "download-file" "Downloading ~s to ~s." file-id filename)
+          (if (zero? (status:exit-val (system cmd)))
+							(begin
+								;; The exact filename is not controllable with gen3-client, so
+								;; let's move it to the expected location.
+								(rename-file (car (scandir filename-path
+																					 (lambda (file)
+																						 (string-suffix? ".bam" file))))
+														 filename)
+								(rmdir filename-path)
+								(call-with-output-file (string-append filename ".complete")
+									(lambda (port)
+										(format port "~a" cmd)
+										(step-completed "download" object-id))))
               (begin
                 (log-error "download-file" "Download failed.")
                 (step-failed "download" object-id)))))]

@@ -18,7 +18,7 @@
   #:export (access-token
             donor-id
             cache-directory
-            gen3-metadata-file
+            gen3-metadata
             google-archive-bucket
             google-cmek-path
             google-project
@@ -30,7 +30,7 @@
             set-access-token!
             set-cache-directory!
             set-donor-id!
-            set-gen3-metadata-file!
+            set-gen3-metadata!
             set-google-archive-bucket!
             set-google-cmek-path!
             set-google-project!
@@ -78,9 +78,9 @@
                         #:getter get-access-token
                         #:setter set-access-token-private!)
 
-  (gen3-metadata-file   #:init-value '()
-                        #:getter get-gen3-metadata-file
-                        #:setter set-gen3-metadata-file-private!)
+  (gen3-metadata        #:init-value '()
+                        #:getter get-gen3-metadata
+                        #:setter set-gen3-metadata-private!)
 
   (google-project       #:init-value #f
                         #:getter get-google-project
@@ -136,7 +136,7 @@
                                simultaneous-donors
                                store-directory
                                access-token
-                               gen3-metadata-file
+                               gen3-metadata
                                google-archive-bucket
                                google-service-account
                                google-cmek-path

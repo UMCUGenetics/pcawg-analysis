@@ -7,6 +7,7 @@
   #:use-module (pcawg filesystem)
   #:use-module (pcawg hartwig)
   #:use-module (srfi srfi-1)
+  #:use-module (json)
 
   #:export (do-preprocess))
 
@@ -54,7 +55,7 @@
 (define (process-donor donor-id metadata)
   (log-debug "acontrol" "Processing ~a" donor-id)
   (let ((files (files-for-donor donor-id
-                 (with-gen3-object-ids metadata (gen3-metadata-file)))))
+                 (with-gen3-object-ids metadata (gen3-metadata)))))
     (if (every (lambda (t) t)
                (n-par-map 2 bam->fastq files))
         (run-pipeline donor-id)
@@ -73,7 +74,14 @@
       (set-cache-directory! (assoc-ref config 'cache-directory)))
 
     (when (assoc-ref config 'gen3-metadata)
-      (set-gen3-metadata-file! (assoc-ref config 'gen3-metadata)))
+      (set-gen3-metadata! (catch #t
+														(lambda _
+															(list->vector
+															 (call-with-input-file
+																	 (assoc-ref config 'gen3-metadata)
+																 json->scm)))
+														(lambda (key . args)
+															'()))))
 
     (when (assoc-ref config 'google-project)
       (set-google-project! (assoc-ref config 'google-project)))

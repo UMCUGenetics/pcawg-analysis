@@ -135,7 +135,7 @@
          (expected-size  (assoc-ref file-data 'file-size))
          (gen3-object-id (assoc-ref file-data 'gen3-object-id))
          (filename       (filename-by-file-data file-data))
-				 (filename-path  (string-drop-right filename 4)))
+         (filename-path  (string-drop-right filename 4)))
     (cond
      [(file-exists? (string-append filename ".complete"))
       (step-already-completed "download" filename)]
@@ -146,24 +146,23 @@
              (manifest-port (mkstemp! (string-copy "/tmp/manifest-XXXXXX")))
              (manifest-file (port-filename manifest-port)))
         (scm->json manifest manifest-port)
-				(force-output manifest-port)
-				(close manifest-port)
-        (let* ((cmd (format #f "~a download-multiple --profile=icgc --manifest=~s --no-prompt --download-path=~s > /dev/null 2> /dev/null"
+                                (force-output manifest-port)
+                                (close manifest-port)
+        (let* ((cmd (format #f "~a download-multiple --skip-completed --profile=icgc --manifest=~s --no-prompt --download-path=~s > /dev/null 2> /dev/null"
                             %gen3-client manifest-file filename-path)))
-					(log-debug "download-file" "Downloading ~s to ~s." file-id filename)
+                                        (log-debug "download-file" "Downloading ~s to ~s." file-id filename)
           (if (zero? (status:exit-val (system cmd)))
-							(begin
-								;; The exact filename is not controllable with gen3-client, so
-								;; let's move it to the expected location.
-								(rename-file (car (scandir filename-path
-																					 (lambda (file)
-																						 (string-suffix? ".bam" file))))
-														 filename)
-								(rmdir filename-path)
-								(call-with-output-file (string-append filename ".complete")
-									(lambda (port)
-										(format port "~a" cmd)
-										(step-completed "download" object-id))))
+              (let ((found-file (scandir filename-path
+                                         (lambda (file)
+                                           (string-suffix? ".bam" file)))))
+                ;; The exact filename is not controllable with gen3-client, so
+                ;; let's move it to the expected location.
+                (rename-file (string-append filename-path "/" (car found-file)) filename)
+                (rmdir filename-path)
+                (call-with-output-file (string-append filename ".complete")
+                  (lambda (port)
+                    (format port "~a" cmd)
+                    (step-completed "download" object-id))))
               (begin
                 (log-error "download-file" "Download failed.")
                 (step-failed "download" object-id)))))]
@@ -225,7 +224,7 @@
                                     (string-suffix? ".bam" file)))))
         (mkdir-p fastq-dir)
         (log-debug "read-groups->fastq"
-                   "Going to process:~%~{  - ~a~%~}"
+                   "Going to process:~{~%  - ~a~}"
                    split-files)
         (not (any not
                   (map

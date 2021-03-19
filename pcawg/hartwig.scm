@@ -135,8 +135,8 @@
 
 (define (donor-is-processed? donor-name)
   (let ((port (open-input-pipe
-               (format #f "~a ls gs://patient-report-bucket-umc/~a-from-jar/linx/run.log > /dev/null 2> /dev/null"
-                       %gsutil donor-name))))
+               (format #f "~a ls gs://~a/~a-from-jar/linx/run.log > /dev/null 2> /dev/null"
+                       %gsutil (google-report-bucket) donor-name))))
     (zero? (status:exit-val (close-pipe port)))))
 
 (define (remove-fastq-buckets-for-donor donor-name)

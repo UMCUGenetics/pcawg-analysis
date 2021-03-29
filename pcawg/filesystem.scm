@@ -157,12 +157,18 @@
                                            (string-suffix? ".bam" file)))))
                 ;; The exact filename is not controllable with gen3-client, so
                 ;; let's move it to the expected location.
-                (rename-file (string-append filename-path "/" (car found-file)) filename)
-                (rmdir filename-path)
-                (call-with-output-file (string-append filename ".complete")
-                  (lambda (port)
-                    (format port "~a" cmd)
-                    (step-completed "download" object-id))))
+                (if (null? found-file)
+                    (begin
+                      (log-error "download-file" "Downloading ~s failed." file-id)
+                      (log-error "download-file" "Try running the following command manually:~%~s" cmd)
+                      (step-failed "download" object-id))
+                    (begin
+                      (rename-file (string-append filename-path "/" (car found-file)) filename)
+                      (rmdir filename-path)
+                      (call-with-output-file (string-append filename ".complete")
+                        (lambda (port)
+                          (format port "~a" cmd)
+                          (step-completed "download" object-id))))))
               (begin
                 (log-error "download-file" "Download failed.")
                 (step-failed "download" object-id)))))]

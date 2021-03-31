@@ -38,9 +38,9 @@
 
 (define (donor-is-processed? storedir donor-id)
   (let* ((done-ref (format #f "~a/~aR_unmapped.done" storedir donor-id))
-	 (done-tum (format #f "~a/~aT_unmapped.done" storedir donor-id)))
+         (done-tum (format #f "~a/~aT_unmapped.done" storedir donor-id)))
     (and (file-exists? done-ref)
-	 (file-exists? done-tum))))
+         (file-exists? done-tum))))
 
 (define (donor->unmapped-reads bucket storedir donor-id)
 
@@ -126,16 +126,16 @@
    (else
     (let ((donor (car donors)))
       (if (donor-is-processed? store-directory donor)
-	  (begin
-	    (log-debug "process-jobs" "~a is already done." donor)
-	    (process-jobs (cdr donors) number-of-jobs report-bucket
-			  store-directory threads))
-	  (process-jobs (cdr donors) number-of-jobs report-bucket store-directory
-			(cons (call-with-new-thread
-                               (lambda _
-				 (donor->unmapped-reads
-				  report-bucket store-directory donor)))
-                              threads)))))))
+    (begin
+      (log-debug "process-jobs" "~a is already done." donor)
+      (process-jobs (cdr donors) number-of-jobs report-bucket
+        store-directory threads))
+    (process-jobs (cdr donors) number-of-jobs report-bucket store-directory
+      (cons (call-with-new-thread
+             (lambda _
+               (donor->unmapped-reads
+                report-bucket store-directory donor)))
+            threads)))))))
 
 (define (do-postprocess options)
   (let ((config (getopt-long options program-options)))

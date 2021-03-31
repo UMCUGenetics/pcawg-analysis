@@ -151,7 +151,7 @@
        (open-file (assoc-ref config 'error-log) "a")))
 
     (unless (assoc-ref config 'simultaneous-donors)
-      (cons `(simultaneous-donors . "1") config))
+      (set! (cons `(simultaneous-donors . "1") config) config))
 
     (unless (assoc-ref config 'store-directory)
       (format #t "Please specify the --store-directory.~%")

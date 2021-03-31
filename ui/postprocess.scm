@@ -30,6 +30,8 @@
      "  --error-log                -e  Where to write the error log."
      "  --simultaneous-donors=ARG  -t  Number of donors to process in parallel."
      "  --store-directory=ARG      -s  Where to store the data."
+     "  --donor-id                 -D  Which donor to process.  When none is"
+     "                                 specified, all donors will be processed."
      "  --help                     -h  Show this message."))
   (exit 0))
 
@@ -147,6 +149,9 @@
       (set-default-error-port!
        (open-file (assoc-ref config 'error-log) "a")))
 
+    (when (assoc-ref config 'donor-id)
+      (set-donor-id! (assoc-ref config 'donor-id)))
+
     (unless (assoc-ref config 'simultaneous-donors)
       (cons `(simultaneous-donors . "1") config))
 
@@ -160,7 +165,9 @@
 
     (log-debug "postprocess" "Started.")
     (log-error "postprocess" "Started.")
-    (let ((donors (donors-from-bucket (assoc-ref config 'report-bucket))))
+    (let ((donors (if (donor-id)
+                      (list donor-id)
+                      (donors-from-bucket (assoc-ref config 'report-bucket)))))
       (process-jobs donors
                     (string->number (assoc-ref config 'simultaneous-donors))
                     (assoc-ref config 'report-bucket)

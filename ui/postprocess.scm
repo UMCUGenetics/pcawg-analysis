@@ -18,6 +18,7 @@
   '((report-bucket          (single-char #\b) (value #t))
     (debug-log              (single-char #\d) (value #t))
     (error-log              (single-char #\e) (value #t))
+    (donor-id               (single-char #\D) (value #t))
     (simultaneous-donors    (single-char #\t) (value #t))
     (store-directory        (single-char #\s) (value #t))
     (help                   (single-char #\h) (value #f))))
@@ -149,9 +150,6 @@
       (set-default-error-port!
        (open-file (assoc-ref config 'error-log) "a")))
 
-    (when (assoc-ref config 'donor-id)
-      (set-donor-id! (assoc-ref config 'donor-id)))
-
     (unless (assoc-ref config 'simultaneous-donors)
       (cons `(simultaneous-donors . "1") config))
 
@@ -165,8 +163,8 @@
 
     (log-debug "postprocess" "Started.")
     (log-error "postprocess" "Started.")
-    (let ((donors (if (donor-id)
-                      (list donor-id)
+    (let ((donors (if (assoc-ref config 'donor-id)
+                      (list (assoc-ref config 'donor-id))
                       (donors-from-bucket (assoc-ref config 'report-bucket)))))
       (process-jobs donors
                     (string->number (assoc-ref config 'simultaneous-donors))

@@ -20,6 +20,7 @@
     (error-log              (single-char #\e) (value #t))
     (simultaneous-donors    (single-char #\t) (value #t))
     (store-directory        (single-char #\s) (value #t))
+    (donor-id               (single-char #\D) (value #t))
     (region                 (single-char #\r) (value #t))
     (help                   (single-char #\h) (value #f))))
 
@@ -31,6 +32,8 @@
      "  --error-log                -e  Where to write the error log."
      "  --simultaneous-donors=ARG  -t  Number of donors to process in parallel."
      "  --store-directory=ARG      -s  Where to store the data."
+     "  --donor=ARG                -D  Which donor to process.  When none is"
+     "                                 specified, all donors will be processed."
      "  --region=ARG               -r  The region to extract."
      "  --help                     -h  Show this message."))
   (exit 0))
@@ -172,7 +175,9 @@
     (let* ((report-bucket   (assoc-ref config 'report-bucket))
            (store-directory (assoc-ref config 'store-directory))
            (region          (assoc-ref config 'region))
-           (donors          (donors-from-bucket report-bucket)))
+           (donors          (if (assoc-ref config 'donor-id)
+                                (list (assoc-ref config 'donor-id))
+                                (donors-from-bucket report-bucket))))
       (process-jobs donors
                     (string->number (assoc-ref config 'simultaneous-donors))
                     report-bucket
